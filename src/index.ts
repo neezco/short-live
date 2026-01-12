@@ -1,1 +1,5 @@
-console.warn("Hello via Template!")
+export const example = 123;
+
+export function greet(name: string) {
+  return `Hola, ${name}`;
+}

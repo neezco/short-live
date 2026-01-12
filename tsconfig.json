@@ -1,56 +1,59 @@
 {
   "compilerOptions": {
-    // Use the newest JavaScript APIs
-    "lib": ["ESNext"],
+    // ----------------------------------------
+    // JS/TS language features
+    // ----------------------------------------
+    "target": "ESNext", // Use latest JS features
+    "lib": ["ESNext"], // Include latest JS APIs
+    // "allowJs": true, // Allow .js files in the project
 
-    // Designed for modern code; use a bundler for compilation and TS only for type checking
-    "target": "ESNext",
+    // ----------------------------------------
+    // Interoperability
+    // ----------------------------------------
+    "resolveJsonModule": true, // Allow importing .json files
+    "types": ["node"], // Include Node.js type definitions
+    "esModuleInterop": true, // Enable default-like imports for CommonJS
 
-    // Keep imports/exports exactly as written, without transforming them
-    "module": "Preserve",
+    // ----------------------------------------
+    // Core build behavior
+    // ----------------------------------------
+    "incremental": true, // Enable incremental compilation for faster rebuilds
+    "declaration": true, // Generate .d.ts type declaration files
+    "emitDeclarationOnly": true, // Emit only .d.ts files without generating JavaScript
+    // "noEmit": true, // Type checking only; do not emit JS
+    // "outDir": "./dist",        // Output directory for emitted files
 
-    // Force module detection when appropriate (recommended for ESNext)
-    "moduleDetection": "force",
+    // ----------------------------------------
+    // Module system & resolution
+    // ----------------------------------------
+    "module": "preserve", // Keep import/export syntax as written
+    "moduleResolution": "bundler", // Modern bundler-friendly resolution
+    "moduleDetection": "force", // Force module detection for ESNext
+    "verbatimModuleSyntax": true, // Preserve exact import/export syntax
+    // "allowImportingTsExtensions": true, // Allow importing .ts with explicit extensions
 
-    // Modern JSX transform for React/Preact (no need to import React)
-    "jsx": "react-jsx",
-    // For preact projects, uncomment the following line:
-    // "jsxImportSource": "preact",
+    // ----------------------------------------
+    // Type checking & strictness
+    // ----------------------------------------
+    "strict": true, // Enable all strict type checking
+    "skipLibCheck": true, // Skip type checking of external libs
+    "noFallthroughCasesInSwitch": true, // Prevent silent fallthrough
+    "noUncheckedIndexedAccess": true, // Safer indexed access
+    "noImplicitOverride": true, // Require `override` keyword
+    "isolatedDeclarations": true, // Ensure each file can generate its own .d.ts in isolation (safer, deterministic types)
 
-    // Allow .js files inside the project
-    "allowJs": true,
+    // ----------------------------------------
+    // Misc flags
+    // ----------------------------------------
+    "noUnusedLocals": false, // Allow unused local variables (fix by linter)
+    "noUnusedParameters": false, // Allow unused function parameters (useful for API signatures or future expansion)
+    "noPropertyAccessFromIndexSignature": false // Permit direct property access even when coming from an index signature
 
-    // Module resolution optimized for modern bundlers
-    "moduleResolution": "bundler",
-
-    // Allow importing .ts files with explicit extensions
-    "allowImportingTsExtensions": true,
-
-    // Do not modify or remove imports; preserve exact module syntax
-    "verbatimModuleSyntax": true,
-
-    // Do not emit .js files; type checking only
-    "noEmit": true,
-
-    // Enable TypeScript strict mode
-    "strict": true,
-
-    // Skip type checking of external libraries (faster)
-    "skipLibCheck": true,
-
-    // Prevent silent fallthrough in switch statements
-    "noFallthroughCasesInSwitch": true,
-
-    // Safer indexed access (T | undefined)
-    "noUncheckedIndexedAccess": true,
-
-    // Require `override` when overriding class methods
-    "noImplicitOverride": true,
-
-    // Strict flags disabled to avoid unnecessary noise
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
+    // ----------------------------------------
+    // JSX
+    // ----------------------------------------
+    // "jsx": "react-jsx", // Modern JSX transform
+    // "jsxImportSource": "preact", // Uncomment for Preact
   },
 
   // Only analyze files inside src/
