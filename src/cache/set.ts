@@ -16,19 +16,27 @@ export const setOrUpdate = (
   /** @internal */
   now: number = Date.now(),
 ): void => {
-  const { key, value, ttlMs, staleMs } = input;
+  const { key, value, ttlMs, staleTTLMs } = input;
 
   if (key == null) throw new Error("Missing key.");
   if (value == null) throw new Error("Missing value.");
   if (ttlMs == null) throw new Error("Missing ttlMs.");
 
   const ttl = ttlMs ?? state.defaultTTL;
-  const staleTTL = staleMs ?? state.defaultStaleTTL;
+  const staleTTL = staleTTLMs ?? state.defaultStaleTTL;
+
+  if (!Number.isFinite(ttl)) {
+    throw new Error("TTL must be a finite number.");
+  }
+
+  if (!Number.isFinite(staleTTL)) {
+    throw new Error("staleTTL must be a finite number.");
+  }
 
   const entry: CacheEntry = {
     v: value,
     e: now + ttl,
-    se: staleTTL && staleTTL > 0 && isFinite(staleTTL) ? now + staleTTL : 0,
+    se: staleTTL && staleTTL > 0 ? now + staleTTL : 0,
   };
 
   state.store.set(key, entry);
@@ -58,5 +66,5 @@ export interface CacheSetOrUpdateInput {
    * When provided, the entry may be served as stale after TTL
    * but before stale TTL expires.
    */
-  staleMs?: number;
+  staleTTLMs?: number;
 }
