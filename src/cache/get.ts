@@ -18,8 +18,9 @@ export const get = (state: CacheState, key: string, now: number = Date.now()): u
   if (isFresh(entry, now)) return entry.v;
 
   if (isStale(entry, now)) {
-    // TODO: Create a strategy that, based on the range of resources (optimal/non-optimal), allows for maintaining or not maintaining stale keys and either deleting them during get or leaving them for sweeper.
-    deleteKey(state, key, DELETE_REASON.EXPIRED);
+    if (state.purgeStaleOnGet) {
+      deleteKey(state, key, DELETE_REASON.EXPIRED);
+    }
     return entry.v;
   }
 
