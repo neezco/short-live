@@ -10,23 +10,26 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     onExpire,
     onDelete,
     defaultTTL = 1000 * 60 * 5, // 5 minutes
-    maxLength = 100_000,
-    maxSize = 512, // MB
+    maxSize = 100_000,
+    maxSizeMB = 512, // MB
     sweepIntervalMs = 250,
     keysPerBatch = 500,
     sweepTimeBudgetMs = 30,
     sweepExpiredRatio = 0.3,
     defaultStaleTTL = 0,
+    purgeStaleOnGet = false,
   } = options;
 
   const state: CacheState = {
     store: new Map(),
-    sweeper: undefined,
+    get size() {
+      return this.store.size;
+    },
     currentSize: 0,
     processMemory: false,
     onExpire,
     onDelete,
-    maxLength,
+    maxSizeMB,
     maxSize,
     defaultTTL,
     defaultStaleTTL,
@@ -34,6 +37,7 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     sweepExpiredRatio,
     sweepIntervalMs,
     keysPerBatch,
+    purgeStaleOnGet,
   };
 
   return state;

@@ -1,6 +1,5 @@
 /**
  * Base configuration shared between CacheOptions and CacheState.
- * Centralizes all repeated fields to avoid duplication.
  */
 export interface CacheConfigBase {
   /**
@@ -26,7 +25,6 @@ export interface CacheConfigBase {
 
   /**
    * Default stale TTL in milliseconds for entries without explicit stale TTL.
-   * @default 0 (no stale period)
    */
   defaultStaleTTL: number;
 
@@ -34,13 +32,15 @@ export interface CacheConfigBase {
    * Maximum number of entries the cache can hold.
    * @default 100_000
    */
-  maxLength: number;
+  maxSize: number;
 
   /**
    * Maximum size of the cache in MB, based on process memory usage.
+   * @internal
+   * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `maxSizeMB`
    * @default 512
    */
-  maxSize: number;
+  maxSizeMB: number;
 
   /**
    * Interval in milliseconds between sweep operations to check for expired keys.
@@ -61,6 +61,8 @@ export interface CacheConfigBase {
 
   /**
    * Ratio of expired keys to target during sweeps.
+   * @internal
+   * @deprecated Targeting a specific percentage of expired keys requires true random access to guarantee an accurate ratio. Achieving this with `Map` would force duplicating keys in an array and constantly compacting it, increasing algorithmic complexity and memory usage. Since this overhead hurts performance, `sweepExpiredRatio` was deprecated in favor of a faster linear scan.
    * @default 0.3
    */
   sweepExpiredRatio: number;
@@ -72,14 +74,20 @@ export interface CacheConfigBase {
    * @default 30
    */
   sweepTimeBudgetMs: number;
+
+  /**
+   * Controls how stale entries are handled when read from the cache.
+   *
+   * - true  → stale entries are purged immediately after being returned.
+   * - false → stale entries are retained after being returned.
+   *
+   * @default false
+   */
+  purgeStaleOnGet: boolean;
 }
 
 /**
  * Public configuration options for the TTL cache.
- * All fields are optional and override the defaults.
- *
- * Declared as a `type` instead of an `interface` to avoid
- * the ESLint rule @typescript-eslint/no-empty-object-type.
  */
 export type CacheOptions = Partial<CacheConfigBase>;
 
@@ -99,19 +107,24 @@ export interface CacheEntry {
 
 /**
  * Internal state of the TTL cache.
- * Extends the base configuration and adds internal-only fields.
  */
 export interface CacheState extends CacheConfigBase {
   /** Map storing key-value entries. */
   store: Map<string, CacheEntry>;
 
-  /** Background sweeper timer. */
-  sweeper?: NodeJS.Timeout;
+  /** Current number of entries in the cache. */
+  size: number;
 
-  /** Current memory size in bytes. */
+  /** Current memory size in MB.
+   * @internal
+   * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `currentSize`
+   */
   currentSize: number;
 
-  /** Whether process.memoryUsage is available. */
+  /** Whether process.memoryUsage is available.
+   * @internal
+   * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `processMemory`
+   */
   processMemory: boolean;
 
   /** Iterator for sweeping keys. */
