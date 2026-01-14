@@ -62,7 +62,7 @@ describe("validators", () => {
     });
 
     it("should return true if now is at or after expiresAt when no staleTTL", () => {
-      const entryNoStale: CacheEntry = { v: "value", e: now + 1000 };
+      const entryNoStale: CacheEntry = { v: "value", e: now + 1000, se: 0 };
       expect(isExpired(entryNoStale, now + 1000)).toBe(true);
       expect(isExpired(entryNoStale, now + 1500)).toBe(true);
     });
@@ -90,7 +90,7 @@ describe("validators", () => {
     });
 
     it("should return false for expired entry without staleTTL", () => {
-      const entryNoStale: CacheEntry = { v: "value", e: now + 1000 };
+      const entryNoStale: CacheEntry = { v: "value", e: now + 1000, se: 0 };
       expect(isValid(entryNoStale, now + 1000)).toBe(false);
       expect(isValid(entryNoStale, now + 1500)).toBe(false);
     });

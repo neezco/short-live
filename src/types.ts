@@ -124,7 +124,7 @@ export interface CacheEntry {
   e: number;
 
   /** staleExpiresAt: Absolute timestamp when the entry stops being stale (Date.now() + staleTTL). */
-  se?: number;
+  se: number;
 }
 
 /**
