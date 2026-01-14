@@ -25,12 +25,6 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
 
   const state: CacheState = {
     store: new Map(),
-    get size() {
-      return this.store.size;
-    },
-    get entries() {
-      return this.store.entries();
-    },
     _sweepIter: null,
     currentSize: 0,
     processMemory: false,

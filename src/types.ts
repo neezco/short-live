@@ -134,9 +134,6 @@ export interface CacheState extends CacheConfigBase {
   /** Map storing key-value entries. */
   store: Map<string, CacheEntry>;
 
-  /** Current number of entries in the cache. */
-  size: number;
-
   /** Current memory size in MB.
    * @internal
    * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `currentSize`
@@ -148,9 +145,6 @@ export interface CacheState extends CacheConfigBase {
    * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `processMemory`
    */
   processMemory: boolean;
-
-  /** Iterator for sweeping keys. */
-  entries: MapIterator<[string, CacheEntry]>;
 
   /** Iterator for sweeping keys. */
   _sweepIter: MapIterator<[string, CacheEntry]> | null;
