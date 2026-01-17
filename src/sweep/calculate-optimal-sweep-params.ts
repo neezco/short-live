@@ -52,7 +52,8 @@ export const calculateOptimalSweepParams = (state: CacheState): OptimalSweepPara
     value: ratio,
     fromStart: 0,
     fromEnd: 1,
-    toStart: state.optimalSweepTimeBudgetMs,
+    // toStart: state.optimalSweepTimeBudgetMs,
+    toStart: 0,
     toEnd: state.worstSweepTimeBudgetMs,
   });
 

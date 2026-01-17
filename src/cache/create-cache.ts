@@ -28,8 +28,8 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     optimalSweepIntervalMs = 1000,
     keysPerBatch = 500,
     worstSweepTimeBudgetMs = 40,
-    optimalSweepTimeBudgetMs = 10,
-    sweepExpiredRatio = 0.3,
+    // optimalSweepTimeBudgetMs = 10,
+    // sweepExpiredRatio = 0.3,
     defaultStaleTtl = 0,
     purgeStaleOnGet = false,
     purgeStaleOnSweep = false,
@@ -60,8 +60,8 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     defaultTtl,
     defaultStaleTtl,
     worstSweepTimeBudgetMs,
-    optimalSweepTimeBudgetMs,
-    sweepExpiredRatio,
+    // optimalSweepTimeBudgetMs,
+    // sweepExpiredRatio,
     get worstSweepIntervalMs() {
       return worstSweepIntervalMs * instanceCount;
     },

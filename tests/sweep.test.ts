@@ -81,7 +81,7 @@ describe("sweep", () => {
   it("should break sweep when time budget is exceeded", async () => {
     const state = createCache({
       worstSweepTimeBudgetMs: -1,
-      optimalSweepTimeBudgetMs: -1,
+      // optimalSweepTimeBudgetMs: -1,
       autoStartSweep: false,
     });
     const now = Date.now();

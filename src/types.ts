@@ -75,7 +75,7 @@ export interface CacheConfigBase {
    * @deprecated Targeting a specific percentage of expired keys requires true random access to guarantee an accurate ratio. Achieving this with `Map` would force duplicating keys in an array and constantly compacting it, increasing algorithmic complexity and memory usage. Since this overhead hurts performance, `sweepExpiredRatio` was deprecated in favor of a faster linear scan.
    * @default 0.3
    */
-  sweepExpiredRatio: number;
+  // sweepExpiredRatio: number;
 
   /**
    * Worst-case maximum amount of time (in milliseconds) that a sweep cycle
@@ -88,10 +88,11 @@ export interface CacheConfigBase {
   /**
    * Optimus-case maximum amount of time (in milliseconds) that a sweep cycle
    * is allowed to run.
+   * @deprecated The distinction between "worst-case" and "optimal-case" sweep time budgets added unnecessary complexity without significant benefits. As a result, `optimalSweepTimeBudgetMs` has been deprecated to streamline the configuration.
    * @internal
    * @default 10
    */
-  optimalSweepTimeBudgetMs: number;
+  // optimalSweepTimeBudgetMs: number;
 
   /**
    * Controls how stale entries are handled when read from the cache.
