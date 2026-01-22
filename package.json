@@ -4,6 +4,19 @@
   "module": "./dist/index.mjs",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.cts",
+  "author": {
+    "name": "Daniel Hernández Ochoa",
+    "url": "https://github.com/DanhezCode"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/neezco/short-live#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neezco/short-live.git"
+  },
+  "bugs": {
+    "url": "https://github.com/neezco/short-live/issues"
+  },
   "exports": {
     ".": {
       "require": "./dist/index.cjs",
