@@ -2,7 +2,8 @@ import { sweep } from "../sweep/sweep";
 import type { CacheOptions, CacheState } from "../types";
 
 let instanceCount = 0;
-const MAX_INSTANCES = 6;
+const INSTANCE_WARNING_THRESHOLD = 99;
+const cacheStores: CacheState["store"][] = [];
 
 /**
  * Resets the instance count for testing purposes.
@@ -37,19 +38,19 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
   } = options;
 
   instanceCount++;
-  if (instanceCount > MAX_INSTANCES) {
-    throw new Error(
-      `Too many cache instances have been created (${instanceCount}). Consider using a singleton pattern for a single instance.`,
-    );
-  }
-  if (instanceCount > 1) {
+
+  if (instanceCount > INSTANCE_WARNING_THRESHOLD) {
+    // TODO: Use a proper logging mechanism
+    // TODO: Create documentation for this
     console.warn(
-      `Multiple cache instances detected (${instanceCount}). Consider using a singleton pattern for better performance.`,
+      `Too many instances detected (${instanceCount}). This may indicate a configuration issue; consider minimizing instance creation or grouping keys by expected expiration ranges. See the documentation: https://github.com/neezco/short-live/docs/instances`,
     );
   }
 
+  const indexStore = cacheStores.push(new Map()) - 1;
+
   const state: CacheState = {
-    store: new Map(),
+    store: cacheStores[indexStore]!,
     _sweepIter: null,
     currentSize: 0,
     processMemory: false,

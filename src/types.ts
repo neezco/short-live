@@ -86,15 +86,6 @@ export interface CacheConfigBase {
   worstSweepTimeBudgetMs: number;
 
   /**
-   * Optimus-case maximum amount of time (in milliseconds) that a sweep cycle
-   * is allowed to run.
-   * @deprecated The distinction between "worst-case" and "optimal-case" sweep time budgets added unnecessary complexity without significant benefits. As a result, `optimalSweepTimeBudgetMs` has been deprecated to streamline the configuration.
-   * @internal
-   * @default 10
-   */
-  // optimalSweepTimeBudgetMs: number;
-
-  /**
    * Controls how stale entries are handled when read from the cache.
    *
    * - true  → stale entries are purged immediately after being returned.
