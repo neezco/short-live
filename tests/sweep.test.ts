@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { createCache, resetInstanceCount } from "../src/cache/create-cache";
+import { createCache, _resetInstanceCount } from "../src/cache/create-cache";
 import { setOrUpdate } from "../src/cache/set";
 import { defaultYieldFn, sweep } from "../src/sweep/sweep";
 
 describe("sweep", () => {
   beforeEach(() => {
-    resetInstanceCount();
+    _resetInstanceCount();
     vi.useFakeTimers();
   });
 
@@ -16,7 +16,7 @@ describe("sweep", () => {
   });
 
   it("should remove expired entries", async () => {
-    const state = createCache({ autoStartSweep: false });
+    const state = createCache({ _autoStartSweep: false });
     const now = Date.now();
     vi.setSystemTime(now);
 
@@ -37,7 +37,7 @@ describe("sweep", () => {
   it("should remove stale entries if purgeStaleOnSweep is true", async () => {
     const state = createCache({
       purgeStaleOnSweep: true,
-      autoStartSweep: false,
+      _autoStartSweep: false,
     });
     const now = Date.now();
     vi.setSystemTime(now);
@@ -59,7 +59,7 @@ describe("sweep", () => {
   it("should not remove stale entries if purgeStaleOnSweep is false", async () => {
     const state = createCache({
       purgeStaleOnSweep: false,
-      autoStartSweep: false,
+      _autoStartSweep: false,
     });
     const now = Date.now();
     vi.setSystemTime(now);
@@ -80,9 +80,9 @@ describe("sweep", () => {
 
   it("should break sweep when time budget is exceeded", async () => {
     const state = createCache({
-      worstSweepTimeBudgetMs: -1,
+      _worstSweepTimeBudgetMs: -1,
       // optimalSweepTimeBudgetMs: -1,
-      autoStartSweep: false,
+      _autoStartSweep: false,
     });
     const now = Date.now();
     vi.setSystemTime(now);
@@ -113,13 +113,13 @@ describe("sweep", () => {
     spy.mockRestore();
   });
 
-  it("should yield when keysPerBatch is reached", async () => {
+  it("should yield when _maxKeysPerBatch is reached", async () => {
     const now = Date.now();
     const yieldFn = vi.fn(async () => {});
 
     const state = createCache({
-      keysPerBatch: 1,
-      autoStartSweep: false,
+      _maxKeysPerBatch: 1,
+      _autoStartSweep: false,
     });
 
     vi.setSystemTime(now);
@@ -147,9 +147,9 @@ describe("sweep", () => {
     });
 
     const state = createCache({
-      worstSweepIntervalMs: sweepIntervalMs,
-      optimalSweepIntervalMs: sweepIntervalMs,
-      autoStartSweep: false,
+      _worstSweepIntervalMs: sweepIntervalMs,
+      _optimalSweepIntervalMs: sweepIntervalMs,
+      _autoStartSweep: false,
     });
 
     await sweep(state, { schedule });
@@ -166,13 +166,13 @@ describe("sweep", () => {
     expect(schedule).toHaveBeenCalledTimes(4);
   });
 
-  it("should not start sweep automatically if autoStartSweep is false", () => {
+  it("should not start sweep automatically if _autoStartSweep is false", () => {
     const schedule = vi.fn();
     const state = createCache({
-      autoStartSweep: false,
+      _autoStartSweep: false,
     });
 
-    // Since autoStartSweep is false, sweep should not be called automatically
+    // Since _autoStartSweep is false, sweep should not be called automatically
     expect(schedule).not.toHaveBeenCalled();
 
     // Manually call sweep to verify it works

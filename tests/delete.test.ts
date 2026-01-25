@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { createCache, resetInstanceCount } from "../src/cache/create-cache";
+import { createCache, _resetInstanceCount } from "../src/cache/create-cache";
 import { deleteKey, DELETE_REASON } from "../src/cache/delete";
 import { setOrUpdate } from "../src/cache/set";
 
 describe("deleteKey", () => {
   beforeEach(() => {
-    resetInstanceCount();
+    _resetInstanceCount();
   });
   it("should return false for non-existent key", () => {
     const state = createCache();

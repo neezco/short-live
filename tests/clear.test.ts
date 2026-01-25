@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { clear } from "../src/cache/clear";
-import { createCache, resetInstanceCount } from "../src/cache/create-cache";
+import { createCache, _resetInstanceCount } from "../src/cache/create-cache";
 import { setOrUpdate } from "../src/cache/set";
 
 describe("clear", () => {
   beforeEach(() => {
-    resetInstanceCount();
+    _resetInstanceCount();
   });
 
   it("should clear empty cache without errors", () => {

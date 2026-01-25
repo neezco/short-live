@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { createCache, resetInstanceCount } from "../src/cache/create-cache";
+import { createCache, _resetInstanceCount } from "../src/cache/create-cache";
 import { remainingStaleTTL } from "../src/cache/remaining-stale-ttl";
 import { setOrUpdate } from "../src/cache/set";
 
 describe("remainingStaleTTL", () => {
   beforeEach(() => {
-    resetInstanceCount();
+    _resetInstanceCount();
   });
 
   const now = Date.now();
