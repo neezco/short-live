@@ -28,7 +28,7 @@ export function createMonitorObserver(
   let lastCollectedAt = Date.now();
 
   const config = {
-    intervalMs: options?.intervalMs ?? 500,
+    interval: options?.interval ?? 500,
     // options.maxMemory is expected in MB; store bytes internally
     maxMemory: (options?.maxMemory ?? 512) * 1024 * 1024,
   };
@@ -48,7 +48,7 @@ export function createMonitorObserver(
           maxMemory: config.maxMemory,
           collectedAtMs: now,
           previousCollectedAtMs: lastCollectedAt,
-          intervalMs: config.intervalMs,
+          interval: config.interval,
         });
 
         lastMetrics = metrics;
@@ -61,10 +61,14 @@ export function createMonitorObserver(
         prevHrtime = process.hrtime.bigint();
         lastCollectedAt = now;
       } catch (e: unknown) {
-        console.error("MonitorObserver: Not available", e);
         stop();
+        throw new Error("MonitorObserver: Not available", { cause: e });
       }
-    }, config.intervalMs);
+    }, config.interval);
+
+    if (typeof intervalId.unref === "function") {
+      intervalId.unref();
+    }
   }
 
   function stop(): void {
@@ -87,8 +91,8 @@ export function createMonitorObserver(
       config.maxMemory = newConfig.maxMemory * 1024 * 1024;
     }
 
-    if (newConfig.intervalMs !== undefined) {
-      config.intervalMs = newConfig.intervalMs;
+    if (newConfig.interval !== undefined) {
+      config.interval = newConfig.interval;
 
       // restart if active to apply new interval
       if (intervalId) {
@@ -125,13 +129,13 @@ export function collectMetrics(props: {
   maxMemory: number; // bytes
   collectedAtMs: number;
   previousCollectedAtMs: number;
-  intervalMs: number;
+  interval: number;
 }): PerformanceMetrics {
   const nowHrtime = process.hrtime.bigint();
 
   const elapsedNs = Number(nowHrtime - props.prevHrtime);
   const elapsedMs = elapsedNs / 1e6;
-  const actualElapsedMs = props.collectedAtMs - props.previousCollectedAtMs;
+  const actualElapsed = props.collectedAtMs - props.previousCollectedAtMs;
 
   const mem = process.memoryUsage();
   const deltaMem: NodeJS.MemoryUsage = {
@@ -151,7 +155,7 @@ export function collectMetrics(props: {
 
   return {
     cpu: {
-      deltaMs: cpuMs,
+      // deltaMs: cpuMs, // remove to avoid confusion with different unit type
       utilization: cpuRatio,
       delta: cpuDelta,
       total: process.cpuUsage(),
@@ -171,8 +175,8 @@ export function collectMetrics(props: {
 
     collectedAt: props.collectedAtMs,
     previousCollectedAt: props.previousCollectedAtMs,
-    intervalMs: props.intervalMs,
-    actualElapsedMs,
+    interval: props.interval,
+    actualElapsed,
   };
 }
 
@@ -202,7 +206,6 @@ export interface PerformanceMetrics {
   }>;
 
   cpu: NormalizedMetric<{
-    deltaMs: number;
     delta: NodeJS.CpuUsage;
     total: NodeJS.CpuUsage;
   }>;
@@ -219,10 +222,10 @@ export interface PerformanceMetrics {
   previousCollectedAt: number;
 
   /** Interval in milliseconds at which the monitor is running */
-  intervalMs: number;
+  interval: number;
 
   /** Actual elapsed time in milliseconds since the last collection */
-  actualElapsedMs: number;
+  actualElapsed: number;
 }
 
 /**
@@ -230,7 +233,7 @@ export interface PerformanceMetrics {
  */
 export interface CreateMonitorObserverOptions {
   /** Interval between samples in ms. Default: 500 */
-  intervalMs?: number;
+  interval?: number;
 
   /** Maximum RSS memory in megabytes (MB) used for normalization. */
   maxMemory?: number;

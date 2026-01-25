@@ -10,7 +10,7 @@ import type {
 
 // Constants for test configuration
 const DEFAULT_CONFIG: CreateMonitorObserverOptions = {
-  intervalMs: 100,
+  interval: 100,
   maxMemory: 1024 * 1024 * 1024, // 1GB
 };
 
@@ -35,13 +35,13 @@ function assertMetricsStructure(metrics: PerformanceMetrics | null) {
   expect(metrics).toHaveProperty("loop");
   expect(metrics).toHaveProperty("collectedAt");
   expect(metrics).toHaveProperty("previousCollectedAt");
-  expect(metrics).toHaveProperty("intervalMs");
-  expect(metrics).toHaveProperty("actualElapsedMs");
+  expect(metrics).toHaveProperty("interval");
+  expect(metrics).toHaveProperty("actualElapsed");
 
   expect(typeof metrics?.collectedAt).toBe("number");
   expect(typeof metrics?.previousCollectedAt).toBe("number");
-  expect(typeof metrics?.intervalMs).toBe("number");
-  expect(typeof metrics?.actualElapsedMs).toBe("number");
+  expect(typeof metrics?.interval).toBe("number");
+  expect(typeof metrics?.actualElapsed).toBe("number");
 }
 
 /**
@@ -97,7 +97,7 @@ describe("createMonitorObserver", () => {
     expect(metricsAfterStop?.cpu).toEqual(metricsWhileRunning?.cpu);
     expect(metricsAfterStop?.loop).toEqual(metricsWhileRunning?.loop);
     expect(metricsAfterStop?.previousCollectedAt).toEqual(metricsWhileRunning?.previousCollectedAt);
-    expect(metricsAfterStop?.actualElapsedMs).toEqual(metricsWhileRunning?.actualElapsedMs);
+    expect(metricsAfterStop?.actualElapsed).toEqual(metricsWhileRunning?.actualElapsed);
 
     vi.advanceTimersByTime(200);
 
@@ -156,7 +156,7 @@ describe("createMonitorObserver", () => {
     expect(initialMetrics).not.toBeNull();
 
     monitor.updateConfig({
-      intervalMs: 200,
+      interval: 200,
       maxMemory: HALF_GB,
     });
 
@@ -175,10 +175,10 @@ describe("createMonitorObserver", () => {
     vi.advanceTimersByTime(120);
 
     const metrics = monitor.getMetrics();
-    expect(metrics?.intervalMs).toBe(100);
+    expect(metrics?.interval).toBe(100);
     expect(metrics?.collectedAt).toBeDefined();
     expect(metrics?.previousCollectedAt).toBeDefined();
-    expect(metrics?.actualElapsedMs).toBeGreaterThan(0);
+    expect(metrics?.actualElapsed).toBeGreaterThan(0);
 
     monitor.stop();
   });
@@ -193,7 +193,7 @@ describe("createMonitorObserver", () => {
 
     vi.advanceTimersByTime(120);
     expect(collectedMetrics).toHaveLength(1);
-    expect(collectedMetrics[0]?.actualElapsedMs).toBeGreaterThan(0);
+    expect(collectedMetrics[0]?.actualElapsed).toBeGreaterThan(0);
 
     vi.advanceTimersByTime(120);
     expect(collectedMetrics).toHaveLength(2);
@@ -201,12 +201,12 @@ describe("createMonitorObserver", () => {
     // Verify timestamps reflect progression
     expect(collectedMetrics[1]!.collectedAt).toBeGreaterThan(collectedMetrics[0]!.collectedAt);
     expect(collectedMetrics[1]!.previousCollectedAt).toBe(collectedMetrics[0]!.collectedAt);
-    expect(collectedMetrics[1]!.actualElapsedMs).toBeGreaterThan(0);
+    expect(collectedMetrics[1]!.actualElapsed).toBeGreaterThan(0);
 
     monitor.stop();
   });
 
-  it("should update intervalMs in metrics when config changes", () => {
+  it("should update interval in metrics when config changes", () => {
     const collectedMetrics: PerformanceMetrics[] = [];
     const monitor = createTestMonitor({
       callback: m => collectedMetrics.push(m),
@@ -214,18 +214,18 @@ describe("createMonitorObserver", () => {
 
     monitor.start();
     vi.advanceTimersByTime(120);
-    expect(collectedMetrics[0]?.intervalMs).toBe(100);
+    expect(collectedMetrics[0]?.interval).toBe(100);
 
-    monitor.updateConfig({ intervalMs: 200 });
+    monitor.updateConfig({ interval: 200 });
     vi.advanceTimersByTime(250);
-    expect(collectedMetrics[1]?.intervalMs).toBe(200);
+    expect(collectedMetrics[1]?.interval).toBe(200);
 
     monitor.stop();
   });
 
   it("should invoke callback correctly when interval changes", () => {
     const callback = vi.fn();
-    const monitor = createTestMonitor({ intervalMs: 500, callback });
+    const monitor = createTestMonitor({ interval: 500, callback });
 
     monitor.start();
     vi.advanceTimersByTime(550);
@@ -249,7 +249,7 @@ function createCollectMetricsProps(overrides?: {
   maxMemory?: number;
   collectedAtMs?: number;
   previousCollectedAtMs?: number;
-  intervalMs?: number;
+  interval?: number;
 }) {
   const now = Date.now();
   return {
@@ -260,7 +260,7 @@ function createCollectMetricsProps(overrides?: {
     maxMemory: (overrides?.maxMemory ?? DEFAULT_CONFIG.maxMemory) as number,
     collectedAtMs: overrides?.collectedAtMs ?? now,
     previousCollectedAtMs: overrides?.previousCollectedAtMs ?? now - 100,
-    intervalMs: (overrides?.intervalMs ?? DEFAULT_CONFIG.intervalMs) as number,
+    interval: (overrides?.interval ?? DEFAULT_CONFIG.interval) as number,
   };
 }
 
@@ -284,7 +284,7 @@ describe("collectMetrics", () => {
   it("should collect CPU metrics", () => {
     const metrics = collectMetrics(createCollectMetricsProps());
 
-    expect(metrics.cpu).toHaveProperty("deltaMs");
+    // expect(metrics.cpu).toHaveProperty("deltaMs"); // removed to avoid confusion with different unit type
     expect(metrics.cpu.delta).toHaveProperty("user");
     expect(metrics.cpu.delta).toHaveProperty("system");
 
@@ -321,7 +321,7 @@ describe("collectMetrics", () => {
     assertNormalizedRatio(metrics2.loop.utilization);
   });
 
-  it("should calculate actualElapsedMs correctly", () => {
+  it("should calculate actualElapsed correctly", () => {
     const previousCollected = Date.now();
     const currentCollected = previousCollected + 150;
 
@@ -332,7 +332,7 @@ describe("collectMetrics", () => {
       }),
     );
 
-    expect(metrics.actualElapsedMs).toBe(150);
+    expect(metrics.actualElapsed).toBe(150);
     expect(metrics.collectedAt).toBe(currentCollected);
     expect(metrics.previousCollectedAt).toBe(previousCollected);
   });
