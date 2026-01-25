@@ -37,55 +37,6 @@ export interface CacheConfigBase {
   maxSize: number;
 
   /**
-   * Maximum size of the cache in MB, based on process memory usage.
-   * @internal
-   * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `maxSizeMB`
-   * @default 512
-   */
-  maxSizeMB: number;
-
-  /**
-   * Worst-case interval in milliseconds between sweep operations.
-   * @internal
-   * @default 300
-   */
-  worstSweepIntervalMs: number;
-
-  /**
-   * Optimus-case interval in milliseconds between sweep operations.
-   * @internal
-   * @default 1000
-   */
-  optimalSweepIntervalMs: number;
-
-  /**
-   * Number of keys to process in each batch before yielding to the event loop.
-   *
-   * This does NOT limit the total number of keys processed in a sweep.
-   * As long as there is remaining sweepTimeBudgetMs, the sweeper will run
-   * multiple batches, yielding after each one to avoid blocking the event loop.
-   *
-   * @default 500
-   */
-  keysPerBatch: number;
-
-  /**
-   * Ratio of expired keys to target during sweeps.
-   * @internal
-   * @deprecated Targeting a specific percentage of expired keys requires true random access to guarantee an accurate ratio. Achieving this with `Map` would force duplicating keys in an array and constantly compacting it, increasing algorithmic complexity and memory usage. Since this overhead hurts performance, `sweepExpiredRatio` was deprecated in favor of a faster linear scan.
-   * @default 0.3
-   */
-  // sweepExpiredRatio: number;
-
-  /**
-   * Worst-case maximum amount of time (in milliseconds) that a sweep cycle
-   * is allowed to run.
-   * @internal
-   * @default 40
-   */
-  worstSweepTimeBudgetMs: number;
-
-  /**
    * Controls how stale entries are handled when read from the cache.
    *
    * - true  → stale entries are purged immediately after being returned.
@@ -111,9 +62,15 @@ export interface CacheConfigBase {
    * - true  → sweep starts automatically.
    * - false → sweep does not start automatically, allowing manual control.
    *
+   * @internal
    * @default true
    */
-  autoStartSweep: boolean;
+  _autoStartSweep: boolean;
+
+  /**
+   * Allowed expired ratio for the cache instance.
+   */
+  alowExpiredRatio: number;
 }
 
 /**
@@ -142,18 +99,18 @@ export interface CacheState extends CacheConfigBase {
   /** Map storing key-value entries. */
   store: Map<string, CacheEntry>;
 
-  /** Current memory size in MB.
-   * @internal
-   * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `currentSize`
-   */
-  currentSize: number;
-
-  /** Whether process.memoryUsage is available.
-   * @internal
-   * @deprecated The memory model in `browsers` differs significantly from `Node.js`, and the added complexity of hydration in browser APIs contributed to the deprecation of `processMemory`
-   */
-  processMemory: boolean;
+  /** Current size */
+  size: number;
 
   /** Iterator for sweeping keys. */
   _sweepIter: MapIterator<[string, CacheEntry]> | null;
+
+  /** Index of this instance for sweep all. */
+  _instanceIndexState: number;
+
+  /** Expire ratio avg for instance */
+  _expiredRatio: number;
+
+  /** Sweep weight for instance, calculate based on size and _expiredRatio */
+  _sweepWeight: number;
 }
