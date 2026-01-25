@@ -1,8 +1,16 @@
-import { DELETE_REASON, deleteKey } from "../cache/delete";
-import { isExpired, isStale } from "../cache/validators";
+import { _instancesCache } from "../cache/create-cache";
+import {
+  MAX_KEYS_PER_BATCH,
+  OPTIMAL_SWEEP_INTERVAL,
+  OPTIMAL_SWEEP_TIME_BUDGET_IF_NOTE_METRICS_AVAILABLE,
+} from "../defaults";
 import type { CacheState } from "../types";
+import { monitor } from "../utils/start-monitor";
 
+import { _batchUpdateExpiredRatio } from "./batchUpdateExpiredRatio";
 import { calculateOptimalSweepParams } from "./calculate-optimal-sweep-params";
+import { _sweepOnce } from "./sweep-once";
+import { _updateWeightSweep } from "./updateWeight";
 
 /**
  * Performs a sweep operation on the cache to remove expired and optionally stale entries.
@@ -15,58 +23,79 @@ export const sweep = async (
   /** @internal */
   utilities: SweepUtilities = {},
 ): Promise<void> => {
-  const { schedule = defaultSchedule, yieldFn = defaultYieldFn, now = Date.now() } = utilities;
-  let processed = 0;
+  const {
+    schedule = defaultSchedule,
+    yieldFn = defaultYieldFn,
+    now = Date.now(),
+    runOnlyOne = false,
+  } = utilities;
   const startTime = now;
 
-  // Ensure iterator exists
-  if (!state._sweepIter) {
-    state._sweepIter = state.store.entries();
+  let metrics = null;
+  try {
+    // Retrieve current system metrics from the monitor
+    metrics = monitor.getMetrics();
+  } catch {
+    // Ignore errors in retrieving metrics
   }
 
-  // Calculate optimal sweep parameters based on current usage
-  const { sweepIntervalMs, sweepTimeBudgetMs } = calculateOptimalSweepParams(state);
+  let sweepIntervalMs = OPTIMAL_SWEEP_INTERVAL;
+  let sweepTimeBudgetMs = OPTIMAL_SWEEP_TIME_BUDGET_IF_NOTE_METRICS_AVAILABLE;
+  if (metrics) {
+    try {
+      ({ sweepIntervalMs, sweepTimeBudgetMs } = calculateOptimalSweepParams({ metrics }));
+    } catch {
+      // Ignore errors in calculating optimal sweep params
+    }
+  }
+
+  const totalSweepWeight = _updateWeightSweep();
+  const currentExpiredRatios: number[][] = [];
 
   while (true) {
-    const next = state._sweepIter.next();
-
-    // Iterator exhausted → reset and stop this cycle
-    if (next.done) {
-      state._sweepIter = state.store.entries();
+    if (totalSweepWeight <= 0) {
       break;
     }
 
-    const [key, entry] = next.value;
+    let threshold = Math.random() * totalSweepWeight;
+    let instanceToSweep: CacheState = _instancesCache[0] as CacheState;
 
-    if (isExpired(entry, now)) {
-      deleteKey(state, key, DELETE_REASON.EXPIRED);
-    } else if (isStale(entry, now) && state.purgeStaleOnSweep) {
-      deleteKey(state, key, DELETE_REASON.STALE);
+    // Select instance to sweep based on weight
+    for (const inst of _instancesCache) {
+      threshold -= inst._sweepWeight;
+      if (threshold <= 0) {
+        instanceToSweep = inst;
+        break;
+      }
     }
 
-    processed++;
+    const { ratio } = _sweepOnce(instanceToSweep, MAX_KEYS_PER_BATCH);
+    // Initialize or update `currentExpiredRatios` array for current ratios
+    (currentExpiredRatios[instanceToSweep._instanceIndexState] ??= []).push(ratio);
 
     if (Date.now() - startTime > sweepTimeBudgetMs) {
       break;
     }
 
-    if (processed >= state.keysPerBatch) {
-      processed = 0;
-
-      // Yield to release event loop
-      await yieldFn();
-    }
+    await yieldFn();
   }
 
+  _batchUpdateExpiredRatio(currentExpiredRatios);
+
   // Schedule next sweep
-  schedule(() => void sweep(state, utilities), sweepIntervalMs);
+  if (!runOnlyOne) {
+    schedule(() => void sweep(state, utilities), sweepIntervalMs);
+  }
 };
 
+// Default utilities for scheduling and yielding --------------------------------
 const defaultSchedule: scheduleType = (fn, ms) => {
-  setTimeout(fn, ms);
+  const t = setTimeout(fn, ms);
+  if (typeof t.unref === "function") t.unref();
 };
 export const defaultYieldFn: yieldFnType = () => new Promise(resolve => setImmediate(resolve));
 
+// Types for internal utilities -----------------------------------------------
 type scheduleType = (fn: () => void, ms: number) => void;
 type yieldFnType = () => Promise<void>;
 interface SweepUtilities {
@@ -86,4 +115,10 @@ interface SweepUtilities {
 
   /** Current timestamp for testing purposes. */
   now?: number;
+
+  /**
+   * If true, only run one sweep cycle.
+   * @internal
+   */
+  runOnlyOne?: boolean;
 }
