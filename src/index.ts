@@ -1,5 +1,6 @@
-export const example = 123;
+import { createCache } from "./cache/create-cache";
+import { deleteKey } from "./cache/delete";
+import { get } from "./cache/get";
+import { setOrUpdate } from "./cache/set";
 
-export function greet(name: string) {
-  return `Hola, ${name}`;
-}
+export { createCache, deleteKey, get, setOrUpdate };

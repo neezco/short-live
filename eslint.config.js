@@ -23,6 +23,9 @@ export default defineConfig(
       // Gitignored files and folders
       ...gitignore,
 
+      // NEXT: Ignore bench temporarily, remove later
+      "bench",
+
       // Configuration files
       "*.config.{js,ts}",
 
