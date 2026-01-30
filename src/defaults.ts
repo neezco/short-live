@@ -4,6 +4,27 @@
 export const MAX_KEYS_PER_BATCH = 1000;
 
 /**
+ * Minimal expired ratio enforced.
+ * Ensures control sweeps run to update weights at lease
+ * on high memory pressure.
+ */
+export const MINIMAL_EXPIRED_RATIO = 0.05;
+
+/**
+ * Memory usage reference (80%) above which
+ * control sweeps are forced, interpolating down toward
+ * MINIMAL_EXPIRED_RATIO.
+ */
+export const EXPIRED_RATIO_MEMORY_THRESHOLD = 0.8;
+
+/**
+ * Default maximum expired ratio allowed when memory is free.
+ * Acts as the upper bound in interpolation with MINIMAL_EXPIRED_RATIO
+ * Recommended range: 0.3–0.5.
+ */
+export const DEFAULT_MAX_EXPIRED_RATIO = 0.4;
+
+/**
  * Optimal interval in milliseconds between sweeps when metrics are available.
  */
 export const OPTIMAL_SWEEP_INTERVAL = 2000;

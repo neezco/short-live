@@ -9,8 +9,9 @@ import { _metrics } from "../utils/start-monitor";
 
 import { _batchUpdateExpiredRatio } from "./batchUpdateExpiredRatio";
 import { calculateOptimalSweepParams } from "./calculate-optimal-sweep-params";
+import { _selectInstanceToSweep } from "./select-instance-to-sweep";
 import { _sweepOnce } from "./sweep-once";
-import { _updateWeightSweep } from "./updateWeight";
+import { _updateWeightSweep } from "./update-weight";
 
 /**
  * Performs a sweep operation on the cache to remove expired and optionally stale entries.
@@ -40,24 +41,23 @@ export const sweep = async (
   const totalSweepWeight = _updateWeightSweep();
   const currentExpiredRatios: number[][] = [];
 
+  // Reduce the maximum number of keys per batch only when no instance weights are available
+  // and the sweep is running in minimal round‑robin control mode. In this case, execute the
+  // smallest possible sweep (equivalent to one batch, but divided across instances).
+  const maxKeysPerBatch =
+    totalSweepWeight <= 0 ? MAX_KEYS_PER_BATCH / _instancesCache.length : MAX_KEYS_PER_BATCH;
+
+  let batchSweep = 0;
   while (true) {
-    if (totalSweepWeight <= 0) {
+    batchSweep += 1;
+
+    const instanceToSweep = _selectInstanceToSweep({ batchSweep, totalSweepWeight });
+    if (!instanceToSweep) {
+      // No instance to sweep
       break;
     }
 
-    let threshold = Math.random() * totalSweepWeight;
-    let instanceToSweep: CacheState = _instancesCache[0] as CacheState;
-
-    // Select instance to sweep based on weight
-    for (const inst of _instancesCache) {
-      threshold -= inst._sweepWeight;
-      if (threshold <= 0) {
-        instanceToSweep = inst;
-        break;
-      }
-    }
-
-    const { ratio } = _sweepOnce(instanceToSweep, MAX_KEYS_PER_BATCH);
+    const { ratio } = _sweepOnce(instanceToSweep, maxKeysPerBatch);
     // Initialize or update `currentExpiredRatios` array for current ratios
     (currentExpiredRatios[instanceToSweep._instanceIndexState] ??= []).push(ratio);
 

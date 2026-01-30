@@ -15,6 +15,9 @@ export let _metrics: PerformanceMetrics | null;
 /** Maximum memory limit for the monitor (in MB) */
 export let maxMemoryLimit: number = DEFAULT_MAX_PROCESS_MEMORY_MB;
 
+/** Use 90% of the effective limit */
+export const SAFE_MEMORY_LIMIT_RATIO = 0.9;
+
 export function startMonitor(): void {
   if (__BROWSER__) {
     // Ignore monitor in browser environments
@@ -26,7 +29,7 @@ export function startMonitor(): void {
       const processMemoryLimit = getProcessMemoryLimit();
 
       if (processMemoryLimit && processMemoryLimit > 0) {
-        maxMemoryLimit = (processMemoryLimit / 1024 / 1024) * 0.8; // Use 80% of the effective limit
+        maxMemoryLimit = (processMemoryLimit / 1024 / 1024) * SAFE_MEMORY_LIMIT_RATIO;
       }
     } catch {
       // TODO: proper logger

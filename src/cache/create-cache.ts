@@ -1,3 +1,4 @@
+import { DEFAULT_MAX_EXPIRED_RATIO } from "../defaults";
 import { sweep } from "../sweep/sweep";
 import type { CacheOptions, CacheState } from "../types";
 import { startMonitor } from "../utils/start-monitor";
@@ -27,7 +28,7 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     onDelete,
     defaultTtl = 1000 * 60 * 5, // 5 minutes
     maxSize = 100_000,
-    alowExpiredRatio = 0.3,
+    _maxAllowExpiredRatio = DEFAULT_MAX_EXPIRED_RATIO,
     defaultStaleTtl = 0,
     purgeStaleOnGet = false,
     purgeStaleOnSweep = false,
@@ -59,7 +60,7 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     defaultStaleTtl,
     purgeStaleOnGet,
     purgeStaleOnSweep,
-    alowExpiredRatio,
+    _maxAllowExpiredRatio,
     _autoStartSweep,
     _instanceIndexState: -1,
     _expiredRatio: 0,

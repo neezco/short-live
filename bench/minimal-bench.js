@@ -67,7 +67,7 @@ const runHeavyLoadTests = async () => {
       name: "TTL largo con stale, purge on sweep",
       options: {
         defaultTtl: 5000,
-        defaultStaleTtl: 10000,
+        defaultStaleTtl: 8000,
         purgeStaleOnGet: false,
         purgeStaleOnSweep: true,
       },
@@ -76,8 +76,8 @@ const runHeavyLoadTests = async () => {
     {
       name: "Carga extrema: 10M entradas",
       options: {
-        defaultTtl: 30000,
-        defaultStaleTtl: 60000,
+        defaultTtl: 15000,
+        defaultStaleTtl: 20000,
         purgeStaleOnGet: false,
         purgeStaleOnSweep: false,
       },
@@ -124,9 +124,12 @@ const runHeavyLoadTests = async () => {
     logResult("Tamaño del cache después de delete", formatNumber(cache.store.size), "📊");
 
     // Esperar tiempo suficiente para expiraciones y monitorear sweeper
-    const waitTime =
-      scenario.options.defaultTtl +
-      (scenario.options.defaultStaleTtl > 0 ? scenario.options.defaultStaleTtl : 2000);
+    const waitTime = scenario.options.defaultStaleTtl
+      ? scenario.options.defaultStaleTtl * 1.5
+      : scenario.options.defaultTtl
+        ? scenario.options.defaultTtl * 1.5
+        : 2000;
+
     logProgress(
       `Esperando ${formatTime(waitTime)} para expiración y monitoreando sweeper...`,
       "⏳",

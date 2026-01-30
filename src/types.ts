@@ -70,7 +70,7 @@ export interface CacheConfigBase {
   /**
    * Allowed expired ratio for the cache instance.
    */
-  alowExpiredRatio: number;
+  _maxAllowExpiredRatio: number;
 }
 
 /**
