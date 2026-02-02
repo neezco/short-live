@@ -20,7 +20,8 @@ export function invalidateTag(
   const tagList = Array.isArray(tags) ? tags : [tags];
 
   const expiresAt = _now + (options.delayMs ?? 0);
-  const staleExpiresAt = expiresAt + (options.staleWindowMs ?? 0);
+  const staleWindowMs = options.staleWindowMs ?? 0;
+  const staleExpiresAt = staleWindowMs > 0 ? expiresAt + staleWindowMs : 0;
 
   for (const tag of tagList) {
     state._tags.set(tag, [_now, expiresAt, staleExpiresAt]);
