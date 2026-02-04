@@ -1,7 +1,4 @@
-import { createCache } from "../dist/node/index.mjs";
-import { deleteKey } from "../dist/node/index.mjs";
-import { get } from "../dist/node/index.mjs";
-import { setOrUpdate } from "../dist/node/index.mjs";
+import { LocalTtlCache } from "../dist/node/index.mjs";
 
 // Función para formatear números con separadores
 const formatNumber = num => {
@@ -93,35 +90,35 @@ const runHeavyLoadTests = async () => {
       "⚙️",
     );
 
-    const cache = createCache(scenario.options);
+    const cache = new LocalTtlCache(scenario.options);
 
     // Set: Insertar entradas
     logProgress(`Insertando ${formatNumber(scenario.numKeys)} entradas...`, "➕");
     measureTime(`Set ${formatNumber(scenario.numKeys)} entradas`, () => {
       for (let i = 0; i < scenario.numKeys; i++) {
-        setOrUpdate(cache, { key: `key-${scenario.name}-${i}`, value: `value-${i}` });
+        cache.set(`key-${scenario.name}-${i}`, `value-${i}`);
       }
     });
-    logResult("Tamaño del cache después de set", formatNumber(cache.store.size), "📊");
+    logResult("Tamaño del cache después de set", formatNumber(cache.size), "📊");
 
     // Get: Recuperar entradas
     logProgress(`Recuperando ${formatNumber(scenario.numKeys)} entradas...`, "🔍");
     measureTime(`Get ${formatNumber(scenario.numKeys)} entradas`, () => {
       for (let i = 0; i < scenario.numKeys; i++) {
-        get(cache, `key-${scenario.name}-${i}`);
+        cache.get(`key-${scenario.name}-${i}`);
       }
     });
-    logResult("Tamaño del cache después de get", formatNumber(cache.store.size), "📊");
+    logResult("Tamaño del cache después de get", formatNumber(cache.size), "📊");
 
     // Delete: Eliminar algunas entradas
     const deleteCount = Math.min(100000, scenario.numKeys);
     logProgress(`Eliminando ${formatNumber(deleteCount)} entradas...`, "🗑️");
     measureTime(`Delete ${formatNumber(deleteCount)} entradas`, () => {
       for (let i = 0; i < deleteCount; i++) {
-        deleteKey(cache, `key-${scenario.name}-${i}`);
+        cache.delete(`key-${scenario.name}-${i}`);
       }
     });
-    logResult("Tamaño del cache después de delete", formatNumber(cache.store.size), "📊");
+    logResult("Tamaño del cache después de delete", formatNumber(cache.size), "📊");
 
     // Esperar tiempo suficiente para expiraciones y monitorear sweeper
     const ttl = scenario.options.defaultTtl ?? 0;
@@ -140,25 +137,25 @@ const runHeavyLoadTests = async () => {
         clearInterval(interval);
         return;
       }
-      logResult(`Tamaño del cache en ${formatTime(elapsed)}`, formatNumber(cache.store.size), "📈");
+      logResult(`Tamaño del cache en ${formatTime(elapsed)}`, formatNumber(cache.size), "📈");
     }, 1000); // Log cada 1 segundo
 
     await new Promise(resolve => setTimeout(resolve, waitTime));
     clearInterval(interval);
-    logResult("Tamaño del cache después de espera", formatNumber(cache.store.size), "📊");
+    logResult("Tamaño del cache después de espera", formatNumber(cache.size), "📊");
 
     // Sweep manual (simular)
     logProgress("Simulando sweep adicional...", "🧹");
     measureTime("Get después de expiración", () => {
       for (let i = deleteCount; i < Math.min(deleteCount + 10000, scenario.numKeys); i++) {
-        get(cache, `key-${scenario.name}-${i}`);
+        cache.get(`key-${scenario.name}-${i}`);
       }
     });
-    logResult("Tamaño del cache después de sweep simulado", formatNumber(cache.store.size), "📊");
+    logResult("Tamaño del cache después de sweep simulado", formatNumber(cache.size), "📊");
 
     logResult(
       `Escenario ${scenario.name} completado`,
-      `Tamaño final del cache: ${formatNumber(cache.store.size)}`,
+      `Tamaño final del cache: ${formatNumber(cache.size)}`,
       "🎉",
     );
     console.log("─".repeat(60)); // Separador visual

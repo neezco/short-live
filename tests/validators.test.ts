@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { createCache } from "../src";
+import { createCache } from "../src/cache/create-cache";
 import { isFresh, isStale, isExpired, isValid } from "../src/cache/validators";
 import type { CacheEntry } from "../src/types";
 
