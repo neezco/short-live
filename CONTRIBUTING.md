@@ -1,6 +1,6 @@
-# Contributing to Short-Live
+# Contributing to Neezco Cache
 
-Thank you for your interest in contributing to Short-Live! We'd love your help.
+Thank you for your interest in contributing to Neezco Cache! We'd love your help.
 
 ---
 
@@ -133,7 +133,7 @@ Then create a pull request on GitHub:
 
 ## 🏗️ Project Structure
 
-Short-Live follows a **functional, domain-driven architecture**:
+Neezco Cache follows a **functional, domain-driven architecture**:
 
 ```
 src/
@@ -317,4 +317,4 @@ Feel free to open a discussion or issue on GitHub. We're happy to help!
 
 ---
 
-**Thank you for contributing to Short-Live! 🎉**
+**Thank you for contributing to Neezco Cache! 🎉**

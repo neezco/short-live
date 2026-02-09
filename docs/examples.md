@@ -1,12 +1,12 @@
 # Examples
 
-Learn Short-Live through practical examples for common use cases.
+Learn Neezco Cache through practical examples for common use cases.
 
 ---
 
 ## 📚 Learning Examples
 
-Core concepts for using Short-Live effectively.
+Core concepts for using Neezco Cache effectively.
 
 ### [Tag-Based Invalidation](./examples/tag-based-invalidation.md)
 

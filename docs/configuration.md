@@ -105,7 +105,7 @@ const cache = new LocalTtlCache({
 
 ### Callbacks
 
-Short-Live supports callbacks for monitoring cache operations:
+Neezco Cache supports callbacks for monitoring cache operations:
 
 #### `onExpire(key, value)`
 

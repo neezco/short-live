@@ -6,7 +6,7 @@ Understand how to use stale windows to control memory usage and improve performa
 
 ## What is a Stale Window?
 
-A stale window is a period after an entry expires where it can still be served. Instead of immediately removing expired data, Short-Live allows you to keep serving it while managing memory:
+A stale window is a period after an entry expires where it can still be served. Instead of immediately removing expired data, Neezco Cache allows you to keep serving it while managing memory:
 
 ```javascript
 const cache = new LocalTtlCache({

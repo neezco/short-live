@@ -12,7 +12,6 @@ const ONE_MINUTE: number = 60 * ONE_SECOND;
 
 /**
  * Default Time-To-Live in milliseconds for cache entries.
- * Optimized for short-lived data (3 minutes by default).
  * @default 1_800_000 (30 minutes)
  */
 export const DEFAULT_TTL: number = 30 * ONE_MINUTE;

@@ -5,11 +5,11 @@
 > The API is still evolving, and **breaking changes** may occur at any time.  
 > Production use is **not recommended** until a stable version is published.
 
-# Short-Live 🚀
+# Neezco Cache 🚀
 
 **A smart, lightweight caching library that helps you store data temporarily with automatic cleanup.**
 
-## Why Short-Live?
+## Why Neezco Cache?
 
 ### 🧹 **Automatic Cleanup**
 
@@ -17,7 +17,7 @@ Expired data is cleaned up automatically in the background without your interven
 
 ### 📊 **Scales Well**
 
-Whether caching 10 items or millions, Short-Live is designed to stay fast and efficient.
+Whether caching 10 items or millions, Neezco Cache is designed to stay fast and efficient.
 
 ### 🏷️ **Tag-Based Invalidation**
 
