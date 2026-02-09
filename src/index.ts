@@ -5,9 +5,9 @@ import { get } from "./cache/get";
 import { has } from "./cache/has";
 import { invalidateTag } from "./cache/invalidate-tag";
 import { setOrUpdate } from "./cache/set";
-import type { CacheOptions, CacheState } from "./types";
+import type { CacheOptions, CacheState, InvalidateTagOptions } from "./types";
 
-export type { CacheOptions } from "./types";
+export type { CacheOptions, InvalidateTagOptions } from "./types";
 
 /**
  * A TTL (Time-To-Live) cache implementation with support for expiration,
@@ -224,7 +224,7 @@ export class LocalTtlCache {
    * - Invalidating a tag doesn't prevent new entries from being tagged with it later
    * - The `onDelete` callback is triggered with reason `'expired'` (even if `asStale` is true)
    */
-  invalidateTag(tags: string | string[], asStale?: boolean): void {
-    invalidateTag(this.state, tags, { asStale });
+  invalidateTag(tags: string | string[], options?: InvalidateTagOptions): void {
+    invalidateTag(this.state, tags, options ?? {});
   }
 }

@@ -210,16 +210,18 @@ console.log(cache.size); // 0
 
 ---
 
-### `invalidateTag(tags, asStale)`
+### `invalidateTag(tags, options)`
 
 Mark all entries with one or more tags as expired (or stale, if requested).
 
 ```typescript
 invalidateTag(
   tags: string | string[],
-  options: { asStale?: boolean }
+  options?: InvalidateTagOptions
 ): void
 ```
+
+Options type: `InvalidateTagOptions` — an extensible object with `asStale?: boolean`.
 
 **Parameters:**
 

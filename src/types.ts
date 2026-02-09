@@ -94,6 +94,18 @@ export interface CacheConfigBase {
 export type CacheOptions = Partial<CacheConfigBase>;
 
 /**
+ * Options for `invalidateTag` operation. Kept intentionally extensible so
+ * future flags can be added without breaking callers.
+ */
+export interface InvalidateTagOptions {
+  /** If true, mark affected entries as stale instead of fully expired. */
+  asStale?: boolean;
+
+  // Allow additional option fields for forward-compatibility.
+  [key: string]: unknown;
+}
+
+/**
  *  Lifecycle timestamps stored in a Tuple:
  *  - 0 → createdAt
  *  - 1 → expiresAt

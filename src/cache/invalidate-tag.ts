@@ -1,4 +1,4 @@
-import type { CacheState } from "../types";
+import type { CacheState, InvalidateTagOptions } from "../types";
 
 /**
  * Invalidates one or more tags so that entries associated with them
@@ -28,7 +28,7 @@ import type { CacheState } from "../types";
 export function invalidateTag(
   state: CacheState,
   tags: string | string[],
-  options: { asStale?: boolean } = {},
+  options: InvalidateTagOptions = {},
 
   /** @internal */
   _now: number = Date.now(),
