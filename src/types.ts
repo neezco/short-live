@@ -5,10 +5,10 @@ import type { DELETE_REASON } from "./cache/delete";
  */
 export interface CacheConfigBase {
   /**
-   * Callback invoked when a key expires naturally.
+   * Callback invoked when an entry expires naturally (not manually deleted).
    * @param key - The expired key.
    * @param value - The value associated with the expired key.
-   * @param reason - The reason for deletion ('expired', or 'stale').
+   * @param reason - The reason for expiration: 'expired' (fully expired) or 'stale' (stale window expired).
    */
   onExpire?: (
     key: string,
@@ -31,16 +31,13 @@ export interface CacheConfigBase {
   defaultTtl: number;
 
   /**
-   * Default stale window in milliseconds for entries that do not
-   * specify their own `staleWindowMs`.
+   * Default stale window in milliseconds for entries without explicit `staleWindow`.
    *
-   * This window determines how long an entry may continue to be
-   * served as stale after it reaches its expiration time.
+   * Defines how long an entry can be served as stale after expiration.
+   * The window is relative to each entry's expiration moment, whether from
+   * explicit `ttl` or the cache's `defaultTtl`.
    *
-   * The window is always relative to the entry’s own expiration
-   * moment, regardless of whether that expiration comes from an
-   * explicit `ttl` or from the cache’s default TTL.
-   * @default null (No stale window)
+   * @default 0 (no stale window)
    */
   defaultStaleWindow: number;
 
@@ -59,30 +56,64 @@ export interface CacheConfigBase {
   maxMemorySize: number;
 
   /**
-   * Controls how stale entries are handled when read from the cache.
+   * Controls stale entry purging behavior on `get()` operations.
    *
-   * - true  → stale entries are purged immediately after being returned.
-   * - false → stale entries are retained after being returned.
+   * - `true` → purge stale entries immediately after read.
+   * - `false` → retain stale entries after read.
+   * - `number (0-1)` → purge when `resourceUsage ≥ threshold` (uses `purgeResourceMetric`).
    *
-   * @default false
+   * Environment notes:
+   * - Backend: `"memory"` and `"higher"` metrics available; frontend: only `"size"`.
+   * - Can be overridden per-read via `get(key, { purgeStale })`.
+   *
+   * Defaults:
+   * - With limits → `0.80` (80% resource usage).
+   * - Without limits → `false`.
    */
-  purgeStaleOnGet: boolean;
+  purgeStaleOnGet: PurgeMode;
 
   /**
-   * Controls how stale entries are handled during sweep operations.
+   * Controls stale entry purging behavior during sweep operations.
    *
-   * - true  → stale entries are purged during sweeps.
-   * - false → stale entries are retained during sweeps.
+   * - `true` → purge stale entries during sweeps.
+   * - `false` → retain stale entries during sweeps.
+   * - `number (0-1)` → purge when `resourceUsage ≥ threshold` (uses `purgeResourceMetric`).
    *
-   * @default false
+   * Environment notes:
+   * - Backend: `"memory"` and `"higher"` metrics available; frontend: only `"size"`.
+   * - Prevents stale entry accumulation when enabled.
+   *
+   * Defaults:
+   * - With limits → `0.5` (50% resource usage).
+   * - Without limits → `true` (prevent accumulation).
    */
-  purgeStaleOnSweep: boolean;
+  purgeStaleOnSweep: PurgeMode;
 
   /**
-   * Whether to automatically start the sweep process when the cache is created.
+   * Metric used to evaluate resource usage for threshold-based stale purging.
    *
-   * - true  → sweep starts automatically.
-   * - false → sweep does not start automatically, allowing manual control.
+   * Applies when `purgeStaleOnGet` or `purgeStaleOnSweep` are numeric (0-1).
+   *
+   * Metric options:
+   * - `"size"` → normalized entry count (`current / maxSize`).
+   * - `"memory"` → normalized RAM (`currentMB / maxMemorySize`).
+   * - `"higher"` → max of both metrics (recommended for dual limits).
+   * - `"fixed"` → disable threshold purging; only bool values apply.
+   *
+   * Environment support:
+   * - Backend: all metrics available.
+   * - Frontend: only `"size"`; numeric thresholds fallback to `"fixed"`.
+   *
+   * Auto-selection (if not specified):
+   * - Backend: `"higher"` (both limits) → `"memory"` → `"size"` → `"fixed"`.
+   * - Frontend: `"size"` (if valid) → `"fixed"`.
+   *
+   * @default Depends on environment and valid limits.
+   */
+  purgeResourceMetric?: "memory" | "size" | "higher" | "fixed";
+
+  /**
+   * Auto-start sweep process on cache initialization.
    *
    * @internal
    * @default true
@@ -90,131 +121,252 @@ export interface CacheConfigBase {
   _autoStartSweep: boolean;
 
   /**
-   * Allowed expired ratio for the cache instance.
+   * @internal Maximum allowed ratio of expired entries before aggressive sweep.
    */
   _maxAllowExpiredRatio: number;
 }
 
 /**
- * Public configuration options for the TTL cache.
+ * Purge mode: boolean for immediate/skip, or 0-1 for threshold-based purging.
+ */
+export type PurgeMode = boolean | number;
+
+/**
+ * Public cache configuration (all fields optional).
  */
 export type CacheOptions = Partial<CacheConfigBase>;
 
 /**
- * Options for `invalidateTag` operation. Kept intentionally extensible so
- * future flags can be added without breaking callers.
+ * Options for tag invalidation. Extensible for forward-compatibility.
  */
 export interface InvalidateTagOptions {
-  /** If true, mark affected entries as stale instead of fully expired. */
+  /**
+   * If true, mark entries as stale instead of fully expired.
+   * They remain accessible via stale window if configured.
+   */
   asStale?: boolean;
 
-  // Allow additional option fields for forward-compatibility.
   [key: string]: unknown;
 }
 
 /**
- *  Lifecycle timestamps stored in a Tuple:
- *  - 0 → createdAt
- *  - 1 → expiresAt
- *  - 2 → staleExpiresAt
+ * Cache entry lifecycle timestamps (tuple format).
+ *
+ * - [0] `createdAt` → Entry creation timestamp (absolute).
+ * - [1] `expiresAt` → Expiration timestamp (absolute).
+ * - [2] `staleExpiresAt` → Stale window expiration (absolute).
  */
 export type EntryTimestamp = [
-  /** createdAt: Absolute timestamp the entry was created (Date.now()). */
+  /** Absolute timestamp when entry was created. */
   number,
-
-  /** expiresAt: Absolute timestamp when the entry becomes invalid (Date.now() + TTL). */
+  /** Absolute timestamp when entry expires. */
   number,
-
-  /** staleExpiresAt: Absolute timestamp when the entry stops being stale (Date.now() + staleTTL). */
+  /** Absolute timestamp when stale window expires. */
   number,
 ];
 
 /**
- * Represents a single cache entry.
+ * Cache entry tuple structure: `[timestamps, value, tags]`.
+ *
+ * Tuple indices:
+ * - [0] `EntryTimestamp` → Creation, expiration, and stale timestamps.
+ * - [1] `value` → The cached data.
+ * - [2] `tags` → Associated tags for group invalidation, or null.
  */
 export type CacheEntry = [
   EntryTimestamp,
-
-  /** The stored value. */
+  /** Cached value (any type). */
   unknown,
-
   (
     /**
-     * Optional list of tags associated with this entry.
-     *  Tags can be used for:
-     *  - Group invalidation (e.g., clearing all entries with a given tag)
-     *  - Namespacing or categorization
-     *  - Tracking dependencies
-     *
-     *  If no tags are associated, this field is `null`.
+     * Tags for group invalidation and categorization.
+     * Null if no tags are set.
      */
     string[] | null
   ),
 ];
 
 /**
- * Status of a cache entry.
+ * Entry status: fresh, stale, or expired.
  */
 export enum ENTRY_STATUS {
-  /** The entry is fresh and valid. */
+  /** Valid and within TTL. */
   FRESH = "fresh",
-  /** The entry is stale but can still be served. */
+  /** Expired but within stale window; still served. */
   STALE = "stale",
-  /** The entry has expired and is no longer valid. */
+  /** Beyond stale window; not served. */
   EXPIRED = "expired",
 }
 
 /**
- * Metadata returned when includeMetadata is enabled in get().
- * Contains complete information about a cache entry including
- * timing, status, and associated tags.
+ * Metadata returned from `get()` with `includeMetadata: true`.
+ * Provides complete entry state including timing, status, and tags.
  */
 export interface EntryMetadata<T = unknown> {
   /** The cached value. */
   data: T;
-
-  /** Absolute timestamp when this entry becomes fully expired (in milliseconds). */
+  /** Absolute timestamp (ms) when entry expires. */
   expirationTime: number;
-
-  /** Absolute timestamp when the stale window expires (in milliseconds). */
+  /** Absolute timestamp (ms) when stale window ends. */
   staleWindowExpiration: number;
-
-  /** Current status of the entry (fresh, stale, or expired). */
+  /** Current entry status. */
   status: ENTRY_STATUS;
-
-  /** Tags associated with this entry, or null if no tags are set. */
+  /** Associated tags for group invalidation, or null. */
   tags: string[] | null;
 }
 
 /**
- * Internal state of the TTL cache.
+ * @internal Runtime state for cache instances.
  */
 export interface CacheState extends CacheConfigBase {
-  /** Map storing key-value entries. */
+  /** Key-value store for all entries. */
   store: Map<string, CacheEntry>;
-
-  /** Current size */
+  /** Current entry count. */
   size: number;
-
-  /** Iterator for sweeping keys. */
-  _sweepIter: MapIterator<[string, CacheEntry]> | null;
-
-  /** Index of this instance for sweep all. */
+  /** Iterator for incremental sweep operations. */
+  _sweepIter: IterableIterator<[string, CacheEntry]> | null;
+  /** Instance index for multi-instance sweep scheduling. */
   _instanceIndexState: number;
-
-  /** Expire ratio avg for instance */
+  /** Average ratio of expired entries in this instance. */
   _expiredRatio: number;
-
-  /** Sweep weight for instance, calculate based on size and _expiredRatio */
+  /** Relative weight for sweep operation priority. */
   _sweepWeight: number;
+  /**
+   * Tag invalidation timestamps.
+   * Each tag maps to `[expiredAt, staleAt]` (0 = never set).
+   * Used to determine if entries with this tag are invalidated.
+   */
+  _tags: Map<string, [number, number]>;
+}
+
+/**
+ * Options for `get()` without metadata (default).
+ * Returns only the cached value.
+ */
+export interface GetOptionsWithoutMetadata {
+  /**
+   * If false (or omitted), returns value only without metadata.
+   * @default false
+   */
+  includeMetadata?: false;
 
   /**
-   * Tag invalidation state.
-   * Each tag stores:
-   * - 0 → moment when the tag was marked as expired (0 if never)
-   * - 1 → moment when the tag was marked as stale (0 if never)
+   * Controls stale entry purging on this read.
    *
-   * These timestamps define whether a tag affects an entry based on
-   * the entry's creation time. */
-  _tags: Map<string, [number, number]>;
+   * - `true` → purge immediately after return.
+   * - `false` → keep stale entries.
+   * - `number (0-1)` → purge at resource usage threshold.
+   *
+   * Overrides global `purgeStaleOnGet` setting.
+   */
+  purgeStale?: PurgeMode;
+}
+
+/**
+ * Options for `get()` with metadata.
+ * Returns value and complete entry state.
+ */
+export interface GetOptionsWithMetadata {
+  /**
+   * If true, returns `EntryMetadata<T>` object with value, timing, and tags.
+   */
+  includeMetadata: true;
+
+  /**
+   * Controls stale entry purging on this read.
+   *
+   * - `true` → purge immediately after return.
+   * - `false` → keep stale entries.
+   * - `number (0-1)` → purge at resource usage threshold.
+   *
+   * Overrides global `purgeStaleOnGet` setting.
+   */
+  purgeStale?: PurgeMode;
+}
+
+/**
+ * Options for `set()` method.
+ * Controls TTL, stale window, and tagging per entry.
+ */
+export interface SetOptions {
+  /**
+   * Time-To-Live in milliseconds.
+   * Determines fresh period before expiration.
+   *
+   * Special values:
+   * - `0` | `Infinity` → entry never expires
+   *
+   * Falls back to cache's `defaultTtl` if omitted.
+   */
+  ttl?: number;
+
+  /**
+   * Stale window duration in milliseconds.
+   *
+   * Determines how long entry serves stale after expiration.
+   * Falls back to cache's `defaultStaleWindow` if omitted.
+   */
+  staleWindow?: number;
+
+  /**
+   * One or more tags for group-based invalidation.
+   *
+   * Tags enable batch invalidation via `invalidateTag()`.
+   * Invalidating ANY tag on an entry invalidates the whole entry.
+   *
+   * Falls back to cache's default if omitted.
+   */
+  tags?: string | string[];
+}
+
+/**
+ * TTL cache public interface.
+ * Implemented by `LocalTtlCache` class.
+ */
+export interface LocalTtlCacheInterface {
+  /**
+   * Current number of entries (may include expired entries pending cleanup).
+   */
+  readonly size: number;
+
+  /**
+   * Retrieves value from cache.
+   * Returns fresh, stale, or undefined (expired or not found).
+   *
+   * @overload `get<T>(key)` → `T | undefined` (no metadata)
+   * @overload `get<T>(key, { includeMetadata: true })` → `EntryMetadata<T> | undefined` (with metadata)
+   */
+  get<T = unknown>(key: string): T | undefined;
+  get<T = unknown>(key: string, options: GetOptionsWithMetadata): EntryMetadata<T> | undefined;
+  get<T = unknown>(key: string, options: GetOptionsWithoutMetadata): T | undefined;
+
+  /**
+   * Sets or replaces a cache entry.
+   * @returns true if set/updated, false if rejected (limits/invalid).
+   */
+  set(key: string, value: unknown, options?: SetOptions): boolean;
+
+  /**
+   * Deletes a specific key from cache.
+   * @returns true if deleted, false if not found.
+   */
+  delete(key: string): boolean;
+
+  /**
+   * Checks if key exists (fresh or stale).
+   * @returns true if valid, false if not found or fully expired.
+   */
+  has(key: string): boolean;
+
+  /**
+   * Removes all entries from cache.
+   * Does NOT trigger `onDelete` callbacks (optimization).
+   */
+  clear(): void;
+
+  /**
+   * Marks entries with given tags as expired (or stale).
+   * Invalidating ANY tag on an entry invalidates it.
+   */
+  invalidateTag(tags: string | string[], options?: InvalidateTagOptions): void;
 }

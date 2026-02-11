@@ -9,6 +9,12 @@ import { sweep } from "../sweep/sweep";
 import type { CacheOptions, CacheState } from "../types";
 import { startMonitor } from "../utils/start-monitor";
 
+import {
+  resolvePurgeResourceMetric,
+  resolvePurgeStaleOnGet,
+  resolvePurgeStaleOnSweep,
+} from "./resolve-purge-config";
+
 let _instanceCount = 0;
 const INSTANCE_WARNING_THRESHOLD = 99;
 export const _instancesCache: CacheState[] = [];
@@ -37,8 +43,9 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     maxMemorySize = DEFAULT_MAX_MEMORY_SIZE,
     _maxAllowExpiredRatio = DEFAULT_MAX_EXPIRED_RATIO,
     defaultStaleWindow = DEFAULT_STALE_WINDOW,
-    purgeStaleOnGet = false,
-    purgeStaleOnSweep = false,
+    purgeStaleOnGet,
+    purgeStaleOnSweep,
+    purgeResourceMetric,
     _autoStartSweep = true,
   } = options;
 
@@ -54,6 +61,22 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     );
   }
 
+  const resolvedPurgeResourceMetric =
+    purgeResourceMetric ?? resolvePurgeResourceMetric(maxSize, maxMemorySize);
+
+  const resolvedPurgeStaleOnGet = resolvePurgeStaleOnGet(
+    maxSize,
+    maxMemorySize,
+    resolvedPurgeResourceMetric,
+    purgeStaleOnGet,
+  );
+  const resolvedPurgeStaleOnSweep = resolvePurgeStaleOnSweep(
+    maxSize,
+    maxMemorySize,
+    resolvedPurgeResourceMetric,
+    purgeStaleOnSweep,
+  );
+
   const state: CacheState = {
     store: new Map(),
     _sweepIter: null,
@@ -66,8 +89,9 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
     maxMemorySize,
     defaultTtl,
     defaultStaleWindow,
-    purgeStaleOnGet,
-    purgeStaleOnSweep,
+    purgeStaleOnGet: resolvedPurgeStaleOnGet,
+    purgeStaleOnSweep: resolvedPurgeStaleOnSweep,
+    purgeResourceMetric: resolvedPurgeResourceMetric,
     _maxAllowExpiredRatio,
     _autoStartSweep,
     _instanceIndexState: -1,

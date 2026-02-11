@@ -2,6 +2,7 @@ import { DELETE_REASON, deleteKey } from "../cache/delete";
 import { computeEntryStatus, isExpired, isStale } from "../cache/validators";
 import { MAX_KEYS_PER_BATCH } from "../defaults";
 import { type CacheState } from "../types";
+import { shouldPurge } from "../utils/purge-eval";
 
 /**
  * Performs a single sweep operation on the cache to remove expired and optionally stale entries.
@@ -47,13 +48,13 @@ export function _sweepOnce(
     } else if (isStale(state, status, now)) {
       staleCount += 1;
 
-      if (state.purgeStaleOnSweep) {
+      if (shouldPurge(state.purgeStaleOnSweep, state, "sweep")) {
         deleteKey(state, key, DELETE_REASON.STALE);
       }
     }
   }
 
-  const expiredStaleCount = state.purgeStaleOnSweep ? staleCount : 0;
+  const expiredStaleCount = shouldPurge(state.purgeStaleOnSweep, state, "sweep") ? staleCount : 0;
   return {
     processed,
     expiredCount,
