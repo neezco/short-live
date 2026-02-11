@@ -80,24 +80,54 @@ if (!success) {
 
 ---
 
-### `get(key)`
+### `get(key, options)`
 
 Retrieve a value from the cache.
 
 ```typescript
-get<T = unknown>(key: string): T | undefined
+interface EntryMetadata<T = unknown> {
+  // The cached value.
+  data: T;
+
+  // Absolute timestamp when this entry becomes fully expired (in milliseconds).
+  expirationTime: number;
+
+  // Absolute timestamp when the stale window expires (in milliseconds).
+  staleWindowExpiration: number;
+
+  // Current status of the entry (fresh, stale, or expired).
+  status: ENTRY_STATUS;
+
+  // Tags associated with this entry, or null if no tags are set.
+  tags: string[] | null;
+}
+
+get<T = unknown>(
+  key: string,
+  options?: { includeMetadata?: boolean }
+): T | undefined | EntryMetadata<T>
 ```
 
 **Parameters:**
 
 - `key` - The key to retrieve
+- `options.includeMetadata` (optional, default: false) - If true, returns entry metadata (data, status, expirationTime, staleWindowExpiration, tags)
 
-**Returns:** The cached value if it exists and is not expired, or `undefined` otherwise
+**Returns:** The cached value, or entry metadata object if `includeMetadata` is true. Returns `undefined` if not found or expired.
 
 **Example:**
 
 ```js
 const user = cache.get("user:123");
+
+const entry = cache.get("user:123", { includeMetadata: true });
+if (entry) {
+  console.log(entry.data);
+  console.log(entry.status);
+  console.log(entry.expirationTime);
+  console.log(entry.staleWindowExpiration);
+  console.log(entry.tags);
+}
 ```
 
 **Edge Cases:**

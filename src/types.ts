@@ -165,6 +165,28 @@ export enum ENTRY_STATUS {
 }
 
 /**
+ * Metadata returned when includeMetadata is enabled in get().
+ * Contains complete information about a cache entry including
+ * timing, status, and associated tags.
+ */
+export interface EntryMetadata<T = unknown> {
+  /** The cached value. */
+  data: T;
+
+  /** Absolute timestamp when this entry becomes fully expired (in milliseconds). */
+  expirationTime: number;
+
+  /** Absolute timestamp when the stale window expires (in milliseconds). */
+  staleWindowExpiration: number;
+
+  /** Current status of the entry (fresh, stale, or expired). */
+  status: ENTRY_STATUS;
+
+  /** Tags associated with this entry, or null if no tags are set. */
+  tags: string[] | null;
+}
+
+/**
  * Internal state of the TTL cache.
  */
 export interface CacheState extends CacheConfigBase {

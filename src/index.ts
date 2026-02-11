@@ -1,13 +1,13 @@
 import { clear } from "./cache/clear";
 import { createCache } from "./cache/create-cache";
 import { deleteKey } from "./cache/delete";
-import { get } from "./cache/get";
+import { get, getWithStatus } from "./cache/get";
 import { has } from "./cache/has";
 import { invalidateTag } from "./cache/invalidate-tag";
 import { setOrUpdate } from "./cache/set";
-import type { CacheOptions, CacheState, InvalidateTagOptions } from "./types";
+import type { CacheOptions, CacheState, EntryMetadata, InvalidateTagOptions } from "./types";
 
-export type { CacheOptions, InvalidateTagOptions } from "./types";
+export type { CacheOptions, InvalidateTagOptions, EntryMetadata } from "./types";
 
 /**
  * A TTL (Time-To-Live) cache implementation with support for expiration,
@@ -70,22 +70,47 @@ export class LocalTtlCache {
    * Returns the value if it exists and is not fully expired. If an entry is in the
    * stale window (expired but still within staleWindow), the stale value is returned.
    *
-
    * @param key - The key to retrieve
-   * @returns The cached value if valid, undefined otherwise
+   * @param options - Optional configuration object
+   * @param options.includeMetadata - If true, returns entry metadata (data, status, expirationTime, staleWindowExpiration, tags). Defaults to false
+   * @returns The cached value, or entry metadata if includeMetadata is true. Returns undefined if not found or expired
    *
    * @example
    * ```typescript
-   * const user = cache.get<{ name: string }>("user:123");
-   * ```
+   * // Get value
+   * const user = cache.get("user:123");
    *
-   * @edge-cases
-   * - Returns `undefined` if the key doesn't exist
-   * - Returns `undefined` if the key has expired beyond the stale window
-   * - Returns the stale value if within the stale window
-   * - If `purgeStaleOnGet` is enabled, stale entries are deleted after being returned
+   * // Get with metadata
+   * const entry = cache.get("user:123", { includeMetadata: true });
+   * if (entry) {
+   *   console.log(entry.data);
+   *   console.log(entry.status);
+   * }
+   * ```
    */
-  get<T = unknown>(key: string): T | undefined {
+  get<T = unknown>(key: string): T | undefined;
+  get<T = unknown>(key: string, options: { includeMetadata: true }): EntryMetadata<T> | undefined;
+  get<T = unknown>(key: string, options: { includeMetadata: false }): T | undefined;
+  get<T = unknown>(
+    key: string,
+    options?: { includeMetadata?: boolean },
+  ): T | undefined | EntryMetadata<T> {
+    if (options?.includeMetadata) {
+      const [status, entry] = getWithStatus(this.state, key);
+      if (!entry) return undefined;
+
+      const [timestamps, value, tags] = entry;
+      const [, expiresAt, staleExpiresAt] = timestamps;
+
+      return {
+        data: value as T,
+        expirationTime: expiresAt,
+        staleWindowExpiration: staleExpiresAt,
+        status,
+        tags,
+      } as EntryMetadata<T>;
+    }
+
     return get(this.state, key) as T | undefined;
   }
 
