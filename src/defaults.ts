@@ -137,3 +137,52 @@ export const DEFAULT_CPU_WEIGHT: number = 8.5;
  * Complements CPU weight to assess overall processing capacity.
  */
 export const DEFAULT_LOOP_WEIGHT: number = 6.5;
+
+/**
+ * ===================================================================
+ * Stale Entry Purging
+ * Thresholds and metric selection for stale entry cleanup strategy.
+ * ===================================================================
+ */
+
+/**
+ * Default metric used for resource‑based stale purging
+ * when both size and memory limits are available.
+ */
+export const DEFAULT_PURGE_RESOURCE_METRIC: "higher" = "higher" as const;
+
+/**
+ * Fallback behavior for stale purging on GET
+ * when no resource limits are defined.
+ *
+ * In this scenario, threshold-based purging is disabled,
+ * so GET operations do NOT purge stale entries.
+ */
+export const DEFAULT_PURGE_STALE_ON_GET_NO_LIMITS: boolean = false;
+
+/**
+ * Fallback behavior for stale purging on SWEEP
+ * when no resource limits are defined.
+ *
+ * In this scenario, threshold-based purging is disabled,
+ * so SWEEP operations DO purge stale entries to prevent buildup.
+ */
+export const DEFAULT_PURGE_STALE_ON_SWEEP_NO_LIMITS: boolean = true;
+
+/**
+ * Default threshold for purging stale entries on get operations (backend with limits).
+ * Stale entries are purged when resource usage exceeds 80%.
+ *
+ * Note: This is used when limits are configured.
+ * When no limits are defined, purgeStaleOnGet defaults to false.
+ */
+export const DEFAULT_PURGE_STALE_ON_GET_THRESHOLD: number = 0.8;
+
+/**
+ * Default threshold for purging stale entries during sweep operations (backend with limits).
+ * Stale entries are purged when resource usage exceeds 50%.
+ *
+ * Note: This is used when limits are configured.
+ * When no limits are defined, purgeStaleOnSweep defaults to true.
+ */
+export const DEFAULT_PURGE_STALE_ON_SWEEP_THRESHOLD: number = 0.5;

@@ -1,4 +1,5 @@
-import type { CacheEntry, CacheState, ENTRY_STATUS } from "../types";
+import type { CacheEntry, CacheState, ENTRY_STATUS, PurgeMode } from "../types";
+import { shouldPurge } from "../utils/purge-eval";
 
 import { DELETE_REASON, deleteKey } from "./delete";
 import { computeEntryStatus, isFresh, isStale } from "./validators";
@@ -17,6 +18,7 @@ import { computeEntryStatus, isFresh, isStale } from "./validators";
 export const getWithStatus = (
   state: CacheState,
   key: string,
+  purgeMode?: PurgeMode,
   now: number = Date.now(),
 ): [ENTRY_STATUS | null, CacheEntry | undefined] => {
   const entry = state.store.get(key);
@@ -28,7 +30,8 @@ export const getWithStatus = (
   if (isFresh(state, status, now)) return [status, entry];
 
   if (isStale(state, status, now)) {
-    if (state.purgeStaleOnGet) {
+    const purgeModeToUse = purgeMode ?? state.purgeStaleOnGet;
+    if (shouldPurge(purgeModeToUse, state, "get")) {
       deleteKey(state, key, DELETE_REASON.STALE);
     }
     return [status, entry];
@@ -49,7 +52,12 @@ export const getWithStatus = (
  *
  * @internal
  */
-export const get = (state: CacheState, key: string, now: number = Date.now()): unknown => {
-  const [, entry] = getWithStatus(state, key, now);
+export const get = (
+  state: CacheState,
+  key: string,
+  purgeMode?: PurgeMode,
+  now: number = Date.now(),
+): unknown => {
+  const [, entry] = getWithStatus(state, key, purgeMode, now);
   return entry ? entry[1] : undefined;
 };
