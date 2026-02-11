@@ -1,5 +1,5 @@
 import { DELETE_REASON, deleteKey } from "../cache/delete";
-import { isExpired, isStale } from "../cache/validators";
+import { computeEntryStatus, isExpired, isStale } from "../cache/validators";
 import { MAX_KEYS_PER_BATCH } from "../defaults";
 import { type CacheState } from "../types";
 
@@ -40,10 +40,11 @@ export function _sweepOnce(
 
     const now = Date.now();
 
-    if (isExpired(state, entry, now)) {
+    const status = computeEntryStatus(state, entry, now);
+    if (isExpired(state, status, now)) {
       deleteKey(state, key, DELETE_REASON.EXPIRED);
       expiredCount += 1;
-    } else if (isStale(state, entry, now)) {
+    } else if (isStale(state, status, now)) {
       staleCount += 1;
 
       if (state.purgeStaleOnSweep) {

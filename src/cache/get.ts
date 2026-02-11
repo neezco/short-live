@@ -1,7 +1,7 @@
 import type { CacheState } from "../types";
 
 import { DELETE_REASON, deleteKey } from "./delete";
-import { isFresh, isStale } from "./validators";
+import { computeEntryStatus, isFresh, isStale } from "./validators";
 
 /**
  * Retrieves a value from the cache if the entry is valid.
@@ -15,9 +15,11 @@ export const get = (state: CacheState, key: string, now: number = Date.now()): u
 
   if (!entry) return undefined;
 
-  if (isFresh(state, entry, now)) return entry[1];
+  const status = computeEntryStatus(state, entry, now);
 
-  if (isStale(state, entry, now)) {
+  if (isFresh(state, status, now)) return entry[1];
+
+  if (isStale(state, status, now)) {
     if (state.purgeStaleOnGet) {
       deleteKey(state, key, DELETE_REASON.STALE);
     }

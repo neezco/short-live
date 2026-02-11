@@ -61,13 +61,26 @@ export function computeEntryStatus(
  * - It has not expired according to its own timestamps, and
  * - No associated tag imposes a stricter stale or expired rule.
  *
+ * `entry` can be either a {@link CacheEntry} or a pre-computed {@link ENTRY_STATUS}.
+ * Passing a pre-computed status avoids recalculating the entry status.
+ *
  * @param state - The cache state containing tag metadata.
- * @param entry - The cache entry being evaluated.
+ * @param entry - The cache entry or pre-computed status being evaluated.
+ * @param now - The current timestamp.
  * @returns True if the entry is fresh.
  */
-export const isFresh = (state: CacheState, entry: CacheEntry, now: number): boolean =>
-  computeEntryStatus(state, entry, now) === ENTRY_STATUS.FRESH;
+export const isFresh = (
+  state: CacheState,
+  entry: CacheEntry | ENTRY_STATUS,
+  now: number,
+): boolean => {
+  if (typeof entry === "string") {
+    // If entry is already a pre-computed status (from tags), it's fresh only if that status is FRESH.
+    return entry === ENTRY_STATUS.FRESH;
+  }
 
+  return computeEntryStatus(state, entry, now) === ENTRY_STATUS.FRESH;
+};
 /**
  * Determines whether a cache entry is stale.
  *
@@ -75,17 +88,28 @@ export const isFresh = (state: CacheState, entry: CacheEntry, now: number): bool
  * - It has passed its TTL but is still within its stale window, or
  * - A tag imposes a stale rule that applies to this entry.
  *
+ * `entry` can be either a {@link CacheEntry} or a pre-computed {@link ENTRY_STATUS}.
+ * Passing a pre-computed status avoids recalculating the entry status.
+ *
  * @param state - The cache state containing tag metadata.
- * @param entry - The cache entry being evaluated.
+ * @param entry - The cache entry or pre-computed status being evaluated.
+ * @param now - The current timestamp.
  * @returns True if the entry is stale.
  */
 export const isStale = (
   state: CacheState,
-  entry: CacheEntry,
+  entry: CacheEntry | ENTRY_STATUS,
 
   /** @internal */
   now: number,
-): boolean => computeEntryStatus(state, entry, now) === ENTRY_STATUS.STALE;
+): boolean => {
+  if (typeof entry === "string") {
+    // If entry is already a pre-computed status (from tags), it's stale only if that status is STALE.
+    return entry === ENTRY_STATUS.STALE;
+  }
+
+  return computeEntryStatus(state, entry, now) === ENTRY_STATUS.STALE;
+};
 
 /**
  * Determines whether a cache entry is expired.
@@ -94,17 +118,28 @@ export const isStale = (
  * - It has exceeded both its TTL and stale TTL, or
  * - A tag imposes an expiration rule that applies to this entry.
  *
+ * `entry` can be either a {@link CacheEntry} or a pre-computed {@link ENTRY_STATUS}.
+ * Passing a pre-computed status avoids recalculating the entry status.
+ *
  * @param state - The cache state containing tag metadata.
- * @param entry - The cache entry being evaluated.
+ * @param entry - The cache entry or pre-computed status being evaluated.
+ * @param now - The current timestamp.
  * @returns True if the entry is expired.
  */
 export const isExpired = (
   state: CacheState,
-  entry: CacheEntry,
+  entry: CacheEntry | ENTRY_STATUS,
 
   /** @internal */
   now: number,
-): boolean => computeEntryStatus(state, entry, now) === ENTRY_STATUS.EXPIRED;
+): boolean => {
+  if (typeof entry === "string") {
+    // If entry is already a pre-computed status (from tags), it's expired only if that status is EXPIRED.
+    return entry === ENTRY_STATUS.EXPIRED;
+  }
+
+  return computeEntryStatus(state, entry, now) === ENTRY_STATUS.EXPIRED;
+};
 
 /**
  * Determines whether a cache entry is valid.
@@ -115,18 +150,28 @@ export const isExpired = (
  *
  * Expired entries are considered invalid.
  *
+ * `entry` can be either a {@link CacheEntry} or a pre-computed {@link ENTRY_STATUS},
+ * or undefined/null if the entry was not found. Passing a pre-computed status avoids
+ * recalculating the entry status.
+ *
  * @param state - The cache state containing tag metadata.
- * @param entry - The cache entry, or undefined/null if not found.
+ * @param entry - The cache entry, pre-computed status, or undefined/null if not found.
+ * @param now - The current timestamp (defaults to {@link Date.now}).
  * @returns True if the entry exists and is fresh or stale.
  */
 export const isValid = (
   state: CacheState,
-  entry?: CacheEntry | null,
+  entry?: CacheEntry | ENTRY_STATUS | null,
 
   /** @internal */
   now: number = Date.now(),
 ): boolean => {
   if (!entry) return false;
+  if (typeof entry === "string") {
+    // If entry is already a pre-computed status (from tags), it's valid if it's FRESH or STALE.
+    return entry === ENTRY_STATUS.FRESH || entry === ENTRY_STATUS.STALE;
+  }
+
   const status = computeEntryStatus(state, entry, now);
   return status === ENTRY_STATUS.FRESH || status === ENTRY_STATUS.STALE;
 };
