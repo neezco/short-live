@@ -2,21 +2,22 @@
 export default {
   branches: ["main", { name: "develop", prerelease: "beta", channel: "beta" }],
   plugins: [
-    "@semantic-release/commit-analyzer",
+    ["@semantic-release/commit-analyzer", { preset: "conventionalcommits" }],
     [
       "@semantic-release/release-notes-generator",
       {
+        preset: "conventionalcommits",
         changelogFile: "CHANGELOG.md",
-        writerOpts: {
+        presetConfig: {
           types: [
-            { type: "feat", section: "✨ Features", hidden: false },
-            { type: "fix", section: "🐛 Fixes", hidden: false },
-            { type: "docs", section: "📝 Documentation", hidden: false },
-            { type: "style", section: "💈 Styling", hidden: false },
-            { type: "refactor", section: "⚡ Refactoring", hidden: false },
-            { type: "perf", section: "⏩ Performance", hidden: false },
-            { type: "test", section: "✅ Tests", hidden: false },
-            { type: "chore", section: "🛠️ Internal", hidden: false },
+            { type: "feat", section: "🚀 New Features", hidden: false },
+            { type: "fix", section: "🐞 Bug Fixes", hidden: false },
+            { type: "docs", section: "📚 Documentation Improvements", hidden: false },
+            { type: "style", section: "🎨 Code Style & Formatting", hidden: false },
+            { type: "refactor", section: "🔧 Code Refactoring", hidden: false },
+            { type: "perf", section: "⚡ Performance Improvements", hidden: false },
+            { type: "test", section: "🧪 Test Updates", hidden: false },
+            { type: "chore", section: "📦 Internal Maintenance", hidden: false },
           ],
         },
       },
