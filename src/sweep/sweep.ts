@@ -5,13 +5,32 @@ import {
   OPTIMAL_SWEEP_TIME_BUDGET_IF_NOTE_METRICS_AVAILABLE,
 } from "../defaults";
 import type { CacheState } from "../types";
-import { _metrics } from "../utils/start-monitor";
+import { _metrics, _monitorInstance, startMonitor } from "../utils/start-monitor";
 
 import { _batchUpdateExpiredRatio } from "./batchUpdateExpiredRatio";
 import { calculateOptimalSweepParams } from "./calculate-optimal-sweep-params";
 import { _selectInstanceToSweep } from "./select-instance-to-sweep";
 import { _sweepOnce } from "./sweep-once";
 import { _updateWeightSweep } from "./update-weight";
+
+let _isSweepActive = false;
+let _pendingSweepTimeout: NodeJS.Timeout | null = null;
+
+export function startSweep(state: CacheState): void {
+  if (_isSweepActive) return;
+  _isSweepActive = true;
+  startMonitor();
+  void sweep(state); // schedule next sweep
+}
+
+export function stopSweep(): void {
+  if (_pendingSweepTimeout) {
+    clearTimeout(_pendingSweepTimeout);
+    _pendingSweepTimeout = null;
+  }
+  _monitorInstance?.stop();
+  _isSweepActive = false;
+}
 
 /**
  * Performs a sweep operation on the cache to remove expired and optionally stale entries.
@@ -78,8 +97,8 @@ export const sweep = async (
 
 // Default utilities for scheduling and yielding --------------------------------
 const defaultSchedule: scheduleType = (fn, ms) => {
-  const t = setTimeout(fn, ms);
-  if (typeof t.unref === "function") t.unref();
+  _pendingSweepTimeout = setTimeout(fn, ms);
+  if (typeof _pendingSweepTimeout.unref === "function") _pendingSweepTimeout.unref();
 };
 export const defaultYieldFn: yieldFnType = () => new Promise(resolve => setImmediate(resolve));
 

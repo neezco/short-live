@@ -5,9 +5,8 @@ import {
   DEFAULT_STALE_WINDOW,
   DEFAULT_TTL,
 } from "../defaults";
-import { sweep } from "../sweep/sweep";
+import { startSweep } from "../sweep/sweep";
 import type { CacheOptions, CacheState } from "../types";
-import { startMonitor } from "../utils/start-monitor";
 
 import {
   resolvePurgeResourceMetric,
@@ -26,8 +25,6 @@ export const _instancesCache: CacheState[] = [];
 export const _resetInstanceCount = (): void => {
   _instanceCount = 0;
 };
-
-let _initSweepScheduled = false;
 
 /**
  * Creates the initial state for the TTL cache.
@@ -102,14 +99,7 @@ export const createCache = (options: CacheOptions = {}): CacheState => {
 
   state._instanceIndexState = _instancesCache.push(state) - 1;
 
-  // Start the sweep process
-  if (_autoStartSweep) {
-    if (_initSweepScheduled) return state;
-    _initSweepScheduled = true;
-    void sweep(state);
-  }
-
-  startMonitor();
+  startSweep(state);
 
   return state;
 };

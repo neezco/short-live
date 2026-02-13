@@ -7,7 +7,7 @@ import {
   type ReturnCreateMonitor,
 } from "./process-monitor";
 
-let _monitorInstance: ReturnCreateMonitor | null = null;
+export let _monitorInstance: ReturnCreateMonitor | null = null;
 
 /** Latest collected metrics from the monitor */
 export let _metrics: PerformanceMetrics | null;
