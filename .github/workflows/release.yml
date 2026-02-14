@@ -51,11 +51,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npx --package semantic-release \
-          --package conventional-changelog-conventionalcommits \
-          --package @semantic-release/changelog \
-          --package @semantic-release/git \
-          --package @semantic-release/github \
-          --package @semantic-release/npm \
-          semantic-release
+        run: pnpm release
