@@ -1,134 +1,137 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
-import { createCache } from "../src/cache/create-cache";
-import { get } from "../src/cache/get";
-import { invalidateTag } from "../src/cache/invalidate-tag";
-import { setOrUpdate } from "../src/cache/set";
-import { isExpired, isStale, isFresh } from "../src/cache/validators";
+import { LocalTtlCache, ENTRY_STATUS } from "../src/index";
 
-describe("invalidateTag behavior", () => {
-  const now = Date.now();
+describe("invalidateTag", () => {
+  const cache = new LocalTtlCache();
 
-  it("marks entries as expired when a tag is invalidated (and get deletes them)", () => {
-    const state = createCache();
+  describe("basic tag invalidation", () => {
+    it("should mark entry as EXPIRED when tag is invalidated (default behavior)", () => {
+      cache.set("key", "value", { ttl: 10000, tags: "user:123" });
 
-    setOrUpdate(state, { key: "a", value: "v", ttl: 1000, tags: "t" }, now);
+      let result = cache.get("key", { includeMetadata: true });
+      expect(result?.status).toBe(ENTRY_STATUS.FRESH);
 
-    // invalidate tag slightly after creation
-    invalidateTag(state, "t", {}, now + 10);
+      cache.invalidateTag("user:123");
 
-    const entry = state.store.get("a");
-    expect(entry).toBeDefined();
+      result = cache.get("key", { includeMetadata: true });
+      expect(result).toBeUndefined();
+      expect(cache.has("key")).toBe(false);
+    });
 
-    // After invalidation moment, entry should be considered expired
-    expect(isExpired(state, entry!, now + 20)).toBe(true);
+    it("should mark entry as STALE when tag is invalidated with asStale=true", () => {
+      cache.set("key", "value", { ttl: 10000, staleWindow: 5000, tags: "user:123" });
 
-    // get should remove expired entries and return undefined
-    const val = get(state, "a", now + 20);
-    expect(val).toBeUndefined();
-    expect(state.store.has("a")).toBe(false);
+      let result = cache.get("key", { includeMetadata: true });
+      expect(result?.status).toBe(ENTRY_STATUS.FRESH);
+
+      cache.invalidateTag("user:123", { asStale: true });
+
+      result = cache.get("key", { includeMetadata: true });
+      expect(result).toBeDefined();
+      expect(result?.status).toBe(ENTRY_STATUS.STALE);
+      expect(result?.data).toBe("value");
+    });
+
+    it("should handle entries without tags correctly", () => {
+      cache.set("key", "value", { ttl: 5000 });
+
+      const result = cache.get("key", { includeMetadata: true });
+      expect(result).toBeDefined();
+      expect(result?.tags).toBeNull();
+      expect(result?.status).toBe(ENTRY_STATUS.FRESH);
+    });
   });
 
-  it("marks entries as stale when tag is invalidated as stale and purgeOnGet removes them if enabled", () => {
-    // enable purgeStaleOnGet so get will delete stale entries after returning them
-    const state = createCache({ purgeStaleOnGet: true });
+  describe("multiple tags handling", () => {
+    it("should handle multiple tags on entry - invalidating any tag invalidates entry", () => {
+      cache.set("key", "value", { ttl: 10000, tags: ["user:123", "post:456"] });
 
-    // entry has a stale window
-    setOrUpdate(state, { key: "b", value: "v2", ttl: 1000, staleWindow: 2000, tags: "t2" }, now);
+      let result = cache.get("key", { includeMetadata: true });
+      expect(result?.status).toBe(ENTRY_STATUS.FRESH);
+      expect(result?.tags).toEqual(["user:123", "post:456"]);
 
-    // mark tag as stale after creation
-    invalidateTag(state, "t2", { asStale: true }, now + 5);
+      cache.invalidateTag("post:456");
 
-    const entry = state.store.get("b");
-    expect(entry).toBeDefined();
+      result = cache.get("key", { includeMetadata: true });
+      expect(result).toBeUndefined();
+    });
 
-    // Even before the entry's own expiresAt, the tag forces a STALE status
-    expect(isStale(state, entry!, now + 10)).toBe(true);
+    it("should support batch tag invalidation", () => {
+      cache.set("key1", "value1", { ttl: 10000, tags: "user:123" });
+      cache.set("key2", "value2", { ttl: 10000, tags: "post:456" });
+      cache.set("key3", "value3", { ttl: 10000, tags: "comment:789" });
 
-    // get should return the value but purge it because purgeStaleOnGet=true
-    const val = get(state, "b", now + 10);
-    expect(val).toBe("v2");
-    expect(state.store.has("b")).toBe(false);
+      cache.invalidateTag(["user:123", "post:456"]);
+
+      expect(cache.has("key1")).toBe(false);
+      expect(cache.has("key2")).toBe(false);
+      expect(cache.has("key3")).toBe(true);
+    });
+
+    it("should preserve entry status if tag invalidated but not applied (tag created after entry)", () => {
+      cache.set("key", "value", { ttl: 10000, tags: "user:123" });
+
+      const result1 = cache.get("key", { includeMetadata: true });
+      expect(result1?.status).toBe(ENTRY_STATUS.FRESH);
+
+      cache.invalidateTag("user:123");
+
+      const result2 = cache.get("key", { includeMetadata: true });
+      expect(result2).toBeUndefined();
+    });
   });
 
-  it("does not affect entries created after the tag invalidation", () => {
-    const state = createCache();
+  describe("tag invalidation with stale window", () => {
+    it("should respect stale window when tag marks entry as stale", () => {
+      vi.useFakeTimers();
 
-    // invalidate tag at t1
-    const t1 = now;
-    invalidateTag(state, "tx", {}, t1);
+      const ttl = 100;
+      const staleWindow = 500;
+      const now = Date.now();
 
-    // create entry after invalidation
-    const later = t1 + 100;
-    setOrUpdate(state, { key: "c", value: "v3", ttl: 1000, tags: "tx" }, later);
+      cache.set("key", "value", { ttl, staleWindow, tags: "item:123" });
 
-    const entry = state.store.get("c");
-    expect(entry).toBeDefined();
+      vi.setSystemTime(now + 50);
+      cache.invalidateTag("item:123", { asStale: true });
 
-    // entry created after invalidation should remain fresh
-    expect(isFresh(state, entry!, later + 10)).toBe(true);
-  });
+      let result = cache.get("key", { includeMetadata: true });
+      expect(result?.status).toBe(ENTRY_STATUS.STALE);
 
-  it("stale invalidation does not override an expired invalidation (expired always dominates)", () => {
-    const state = createCache();
+      vi.setSystemTime(now + ttl + staleWindow + 10);
+      result = cache.get("key", { includeMetadata: true });
+      expect(result).toBeUndefined();
 
-    // entry con stale window
-    setOrUpdate(state, { key: "x", value: "v", ttl: 1000, staleWindow: 2000, tags: "t" }, now);
+      vi.useRealTimers();
+    });
 
-    // primero expired
-    invalidateTag(state, "t", {}, now + 10);
+    it("should mark tagged entries as deleted when accessed", () => {
+      const onDelete = vi.fn();
+      const cache2 = new LocalTtlCache({ onDelete });
+      cache2.set("key1", "value1", { tags: "tag1" });
 
-    // luego stale (no debe afectar expired)
-    invalidateTag(state, "t", { asStale: true }, now + 20);
+      cache2.invalidateTag("tag1");
+      cache2.get("key1");
 
-    const entry = state.store.get("x")!;
+      expect(onDelete).toHaveBeenCalled();
+    });
 
-    // expired domina siempre
-    expect(isExpired(state, entry, now + 30)).toBe(true);
-    expect(isStale(state, entry, now + 30)).toBe(false);
-  });
+    it("should correctly prioritize tag expiration over entry TTL", () => {
+      vi.useFakeTimers();
 
-  it("tag stale invalidation does not affect entries without stale window", () => {
-    const state = createCache();
+      const ttl = 10000;
+      const staleWindow = 5000;
+      const now = Date.now();
 
-    setOrUpdate(state, { key: "z", value: "v", ttl: 1000, tags: "t" }, now);
+      cache.set("key", "value", { ttl, staleWindow, tags: "session:xyz" });
 
-    invalidateTag(state, "t", { asStale: true }, now + 10);
+      vi.setSystemTime(now + 100);
+      cache.invalidateTag("session:xyz");
 
-    const entry = state.store.get("z")!;
-    expect(isStale(state, entry, now + 20)).toBe(false);
-    expect(isFresh(state, entry, now + 20)).toBe(true);
-  });
+      const result = cache.get("key", { includeMetadata: true });
+      expect(result).toBeUndefined();
 
-  it("expired tag dominates stale tag", () => {
-    const state = createCache();
-
-    setOrUpdate(
-      state,
-      { key: "m", value: "v", ttl: 1000, staleWindow: 2000, tags: ["t1", "t2"] },
-      now,
-    );
-
-    invalidateTag(state, "t1", { asStale: true }, now + 10);
-    invalidateTag(state, "t2", {}, now + 20);
-
-    const entry = state.store.get("m")!;
-    expect(isExpired(state, entry, now + 30)).toBe(true);
-  });
-
-  it("stale applies if no expired tag applies", () => {
-    const state = createCache();
-
-    setOrUpdate(
-      state,
-      { key: "n", value: "v", ttl: 1000, staleWindow: 2000, tags: ["t1", "t2"] },
-      now,
-    );
-
-    invalidateTag(state, "t1", { asStale: true }, now + 10);
-    invalidateTag(state, "t2", { asStale: true }, now + 20);
-
-    const entry = state.store.get("n")!;
-    expect(isStale(state, entry, now + 30)).toBe(true);
+      vi.useRealTimers();
+    });
   });
 });

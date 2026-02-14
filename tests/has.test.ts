@@ -1,36 +1,119 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { createCache } from "../src/cache/create-cache";
-import { has } from "../src/cache/has";
-import { setOrUpdate } from "../src/cache/set";
+import { LocalTtlCache, ENTRY_STATUS } from "../src/index";
 
 describe("has", () => {
-  const now = Date.now();
+  let cache: LocalTtlCache;
 
-  it("should return false for non-existent key", () => {
-    const state = createCache();
-
-    expect(has(state, "nonexistent")).toBe(false);
+  beforeEach(() => {
+    cache = new LocalTtlCache();
   });
 
-  it("should return true for valid entry", () => {
-    const state = createCache();
+  describe("basic existence checks", () => {
+    it("should return false for non-existent key", () => {
+      expect(cache.has("nonexistent")).toBe(false);
+    });
 
-    setOrUpdate(state, { key: "key1", value: "value1", ttl: 1000 });
-    expect(has(state, "key1")).toBe(true);
+    it("should return true for existing key", () => {
+      cache.set("key1", "value1");
+      expect(cache.has("key1")).toBe(true);
+    });
+
+    it("should return false after deletion", () => {
+      cache.set("key1", "value1");
+      cache.delete("key1");
+      expect(cache.has("key1")).toBe(false);
+    });
   });
 
-  it("should return true for stale entry", () => {
-    const state = createCache();
+  describe("status-aware checks", () => {
+    it("should return true for FRESH entries", () => {
+      cache.set("key", "value", { ttl: 10000 });
+      expect(cache.has("key")).toBe(true);
+    });
 
-    setOrUpdate(state, { key: "key1", value: "value1", ttl: 100, staleWindow: 200 }, now);
-    expect(has(state, "key1", now + 150)).toBe(true);
+    it("should return true for STALE entries", () => {
+      vi.useFakeTimers();
+
+      const ttl = 100;
+      const staleWindow = 100;
+      const now = Date.now();
+
+      cache.set("key", "value", { ttl, staleWindow });
+
+      vi.setSystemTime(now + ttl + 50);
+
+      expect(cache.has("key")).toBe(true);
+
+      vi.useRealTimers();
+    });
+
+    it("should return false for EXPIRED entries", () => {
+      vi.useFakeTimers();
+
+      const ttl = 50;
+      const now = Date.now();
+
+      cache.set("key", "value", { ttl });
+
+      vi.setSystemTime(now + ttl + 100);
+
+      expect(cache.has("key")).toBe(false);
+
+      vi.useRealTimers();
+    });
   });
 
-  it("should return false for expired entry", () => {
-    const state = createCache();
+  describe("consistency with get()", () => {
+    it("should match get() for FRESH entries", () => {
+      cache.set("key", "value", { ttl: 10000 });
 
-    setOrUpdate(state, { key: "key1", value: "value1", ttl: 100 }, now);
-    expect(has(state, "key1", now + 200)).toBe(false);
+      const hasResult = cache.has("key");
+      const getResult = cache.get("key", { includeMetadata: true });
+
+      expect(hasResult).toBe(true);
+      expect(getResult).toBeDefined();
+      expect(getResult?.status).toBe(ENTRY_STATUS.FRESH);
+    });
+
+    it("should match get() for STALE entries", () => {
+      vi.useFakeTimers();
+
+      const ttl = 100;
+      const staleWindow = 100;
+      const now = Date.now();
+
+      cache.set("key", "value", { ttl, staleWindow });
+
+      vi.setSystemTime(now + ttl + 50);
+
+      const hasResult = cache.has("key");
+      const getResult = cache.get("key", { includeMetadata: true });
+
+      expect(hasResult).toBe(true);
+      expect(getResult).toBeDefined();
+      expect(getResult?.status).toBe(ENTRY_STATUS.STALE);
+
+      vi.useRealTimers();
+    });
+
+    it("should match get() for EXPIRED entries", () => {
+      vi.useFakeTimers();
+
+      const ttl = 50;
+      const now = Date.now();
+
+      cache.set("key", "value", { ttl });
+
+      vi.setSystemTime(now + ttl + 100);
+
+      const hasResult = cache.has("key");
+      const getResult = cache.get("key", { includeMetadata: true });
+
+      expect(hasResult).toBe(false);
+      expect(getResult).toBeUndefined();
+
+      vi.useRealTimers();
+    });
   });
 });

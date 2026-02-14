@@ -1,23 +1,29 @@
 import { describe, it, expect } from "vitest";
 
-import { createCache } from "../src/cache/create-cache";
-import { setOrUpdate } from "../src/cache/set";
-import { size } from "../src/cache/size";
+import { LocalTtlCache } from "../src/index";
 
 describe("size", () => {
   it("should return 0 for empty cache", () => {
-    const state = createCache();
-
-    expect(size(state)).toBe(0);
+    const cache = new LocalTtlCache();
+    expect(cache.size).toBe(0);
   });
 
-  it("should return the number of entries in the cache", () => {
-    const state = createCache();
+  it("should return number of entries", () => {
+    const cache = new LocalTtlCache();
+    cache.set("key1", "value1");
+    expect(cache.size).toBe(1);
 
-    setOrUpdate(state, { key: "key1", value: "value1", ttl: 1000 });
-    expect(size(state)).toBe(1);
+    cache.set("key2", "value2");
+    expect(cache.size).toBe(2);
+  });
 
-    setOrUpdate(state, { key: "key2", value: "value2", ttl: 1000 });
-    expect(size(state)).toBe(2);
+  it("should decrease on delete", () => {
+    const cache = new LocalTtlCache();
+    cache.set("key1", "value1");
+    cache.set("key2", "value2");
+    expect(cache.size).toBe(2);
+
+    cache.delete("key1");
+    expect(cache.size).toBe(1);
   });
 });

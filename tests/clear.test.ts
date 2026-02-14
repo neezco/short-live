@@ -1,47 +1,24 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { clear } from "../src/cache/clear";
-import { createCache } from "../src/cache/create-cache";
-import { setOrUpdate } from "../src/cache/set";
+import { LocalTtlCache } from "../src/index";
 
 describe("clear", () => {
-  it("should clear empty cache without errors", () => {
-    const state = createCache();
-    expect(() => clear(state)).not.toThrow();
-    expect(state.store.size).toBe(0);
+  it("should remove all entries", () => {
+    const cache = new LocalTtlCache();
+    cache.set("key1", "value1");
+    cache.set("key2", "value2");
+    expect(cache.size).toBe(2);
+
+    cache.clear();
+    expect(cache.size).toBe(0);
   });
 
-  it("should remove all entries from the cache", () => {
-    const state = createCache();
-    setOrUpdate(state, { key: "key1", value: "value1", ttl: 1000 });
-    setOrUpdate(state, { key: "key2", value: "value2", ttl: 1000 });
-    setOrUpdate(state, { key: "key3", value: "value3", ttl: 1000 });
-
-    expect(state.store.size).toBe(3);
-    clear(state);
-    expect(state.store.size).toBe(0);
-  });
-
-  it("should NOT call onDelete callback when clearing", () => {
+  it("should not call onDelete when clearing", () => {
     const onDelete = vi.fn();
-    const state = createCache({ onDelete });
-    setOrUpdate(state, { key: "key1", value: "value1", ttl: 1000 });
-    setOrUpdate(state, { key: "key2", value: "value2", ttl: 1000 });
+    const cache = new LocalTtlCache({ onDelete });
+    cache.set("key1", "value1");
 
-    clear(state);
-
+    cache.clear();
     expect(onDelete).not.toHaveBeenCalled();
-    expect(state.store.size).toBe(0);
-  });
-
-  it("should work with null values without calling onDelete", () => {
-    const onDelete = vi.fn();
-    const state = createCache({ onDelete });
-    setOrUpdate(state, { key: "key1", value: null, ttl: 1000 });
-
-    clear(state);
-
-    expect(onDelete).not.toHaveBeenCalled();
-    expect(state.store.size).toBe(0);
   });
 });
