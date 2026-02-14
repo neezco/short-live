@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.4.0 (2026-02-14)
+
+* chore: implement startSweep function to manage cache sweep process ([78ded7a](https://github.com/neezco/cache/commit/78ded7a))
+* chore: install semantic-release plugins and add unified release script ([5b7a8b3](https://github.com/neezco/cache/commit/5b7a8b3))
+* test: add comprehensive tests for LocalTtlCache purge strategies and basic operations ([a410f2d](https://github.com/neezco/cache/commit/a410f2d))
+* test: ensure tag invalidation does not affect entries created after the tag ([9282397](https://github.com/neezco/cache/commit/9282397))
+* fix: enforce stale window upper bound when applying tag-based stale invalidation ([593c1d4](https://github.com/neezco/cache/commit/593c1d4)), closes [#19](https://github.com/neezco/cache/issues/19)
+* feat: enhance cache purging strategy with configurable thresholds ([ee762c1](https://github.com/neezco/cache/commit/ee762c1))
+* feat: refactor purge configuration logic and enhance validation for thresholds ([350b9de](https://github.com/neezco/cache/commit/350b9de)), closes [#18](https://github.com/neezco/cache/issues/18)
+* style: add conventional-changelog-conventionalcommits package for improved changelog generation ([5435048](https://github.com/neezco/cache/commit/5435048))
+* style: simplify commit-analyzer plugin configuration ([ecff6a0](https://github.com/neezco/cache/commit/ecff6a0))
+* style: update release notes generator configuration for improved changelog formatting ([1ac4776](https://github.com/neezco/cache/commit/1ac4776))
+
 # [0.3.0](https://github.com/neezco/cache/compare/v0.2.1...v0.3.0) (2026-02-11)
 
 
