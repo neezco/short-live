@@ -32,7 +32,8 @@ export function computeEntryStatus(
   if (
     tagStatus === ENTRY_STATUS.STALE &&
     staleExpiresAt > 0 &&
-    now < earliestTagStaleInvalidation + windowStale
+    now < earliestTagStaleInvalidation + windowStale &&
+    now <= staleExpiresAt
   ) {
     // A tag can mark the entry as stale only if the entry itself supports a stale window.
     // The tag's stale invalidation time is extended by the entry's stale window duration.
